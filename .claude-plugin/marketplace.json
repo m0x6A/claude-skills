@@ -17,8 +17,8 @@
     },
     {
       "name": "feature-workflow",
-      "description": "Issue → reviewed system design → reviewed implementation plan, each approved by a person before the next step. Mermaid diagrams, caveats checklist, risk map and pattern catalogue.",
-      "version": "1.0.0",
+      "description": "Issue → spec → approval before code, at the right size: a router picks trivial, small (one spec-and-tasks document, one gate) or full (reviewed system design, then reviewed implementation plan). Mermaid diagrams, caveats checklist, risk map and pattern catalogue on the full track.",
+      "version": "1.1.0",
       "source": "./plugins/feature-workflow",
       "category": "development",
       "keywords": ["design", "planning", "architecture", "workflow", "mermaid", "review"]

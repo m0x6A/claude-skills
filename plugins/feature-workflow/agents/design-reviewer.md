@@ -1,6 +1,6 @@
 ---
 name: design-reviewer
-description: Scrutinises a feature's system design (design.md) and implementation plan (plan.md) before a person approves them — whether the spec says what the change does, how we'll know it works and what it must not break; a ranked risk map; the problematic patterns it exhibits; boundary violations; contradictions between issue, design, plan, specs and ADRs; missing detail; and engineering problems such as N+1 queries, unbounded reads, non-idempotent consumers and concurrency on shared rows. Run by the feature-design skill before each gate; use it directly when asked whether a design or plan "holds up".
+description: Scrutinises a feature's system design (design.md) and implementation plan (plan.md), or a small-track change.md, before a person approves them — whether the spec says what the change does, how we'll know it works and what it must not break; a ranked risk map; the problematic patterns it exhibits; boundary violations; contradictions between issue, design, plan, specs and ADRs; missing detail; and engineering problems such as N+1 queries, unbounded reads, non-idempotent consumers and concurrency on shared rows. Run by the feature-design and change-design skills before each gate; use it directly when asked whether a design or plan "holds up".
 tools: Read, Grep, Glob, Bash
 model: inherit
 ---
@@ -20,6 +20,8 @@ design assumes that is not true.
 
 - `STAGE=1`: review `design.md`.
 - `STAGE=2`: review `design.md` and `plan.md` together.
+- `STAGE=small`: review a small-track `change.md` (spec, tasks and verification in one
+  document). Follow *Small track* below instead of the full procedure.
 - The issue (`gh issue view <N> --json title,body,comments` or the profile's tracker) for the
   acceptance criteria.
 
@@ -114,6 +116,45 @@ Use `references/patterns.md` from the `feature-design` skill.
 - **Problematic patterns**: every catalogue pattern the design or plan exhibits, with where it
   appears, why it hurts here and the alternative. A pattern that is a defect becomes a finding; a deliberate
   trade-off is listed with its argument acknowledged.
+
+## Small track (`STAGE=small`)
+
+A lighter pass for a change that `start-change` judged small. Two jobs, both against the real code:
+
+1. **Check 0, the spec**, in full, including the neighbour grep for *must not break*. At this
+   size the spec is the whole design, so its gaps are blockers exactly as at stage 1. Also check
+   that every §2.2 and §2.3 row is served by a task in §5, that every task cites S/N items, and
+   that each S-test fails today while an N-guard says what it pins.
+2. **The track.** Verify the small routing holds: grep for a migration or schema change, a changed
+   contract and its consumers, a new or changed consumer or job, a boundary crossing, a third
+   deployable, a new dependency, an auth or tenancy change. Each one found is a blocker
+   `escalate to full` with its evidence. Read the §4 triage lines against the code; an `n/a` that
+   is not is a finding. A trigger the author recorded in §7 as `Override: … — reason` is not a
+   blocker: list it once as an accepted risk.
+3. **Engineering problems** (check 4) on the changed code paths only: an unbounded read, a new
+   predicate with no index, N+1, blocking I/O. These are findings, not escalations.
+
+Run check 4a only if the change writes state. Skip the risk map and the pattern catalogue, and do
+not ask for diagrams. Report:
+
+```
+# Design review — <features>/<N>-<slug> (small)
+
+Verdict: no blockers | <k> blocker(s)
+
+## Spec check
+- Does: ok | <gap>
+- We'll know it works: ok | <gap>
+- Must not break: ok | <neighbours missing or unguarded>
+
+## Track check
+small holds (<what you grepped>) | escalate: <trigger> — <path:line>
+
+## Findings
+1. [Blocker] <section or task id> — <claim> · Evidence: <…> · Change: <…>
+```
+
+At most **three** findings, same severity rules as below.
 
 ## Report format
 

@@ -1,6 +1,6 @@
 ---
 name: feature-design
-description: Start a feature the right way — no code without a written spec of what the change does, how we'll know it works and what it must not break — from an issue to an approved system design (the spec, where it fits, sequence, control, data-flow and data-model diagrams, affected parts, caveats, concurrency and idempotency, decisions) and then a separate approved implementation plan (ordered test-first tasks), each scrutinised by the design-reviewer agent and approved by a person before the next step. Use whenever requested work will change production code across more than a trivial fix (a new feature, a behaviour change, a cross-project refactor), when the user enters plan mode for such work, or when asked "where does this fit", "design this" or "plan this".
+description: Use whenever someone asks for a full design, a system design, a design with sequence, data-flow or ER diagrams, or to escalate a small change to the full design, and whenever start-change routes work to the full track (migrations, contract changes, new consumers, jobs or services, boundary crossings, more than two deployables, new dependencies, auth changes, new multi-step flows). The full track of the feature workflow — no code without a written spec of what the change does, how we'll know it works and what it must not break — from an issue to an approved system design (the spec, where it fits, sequence, control, data-flow and data-model diagrams, affected parts, caveats, concurrency and idempotency, decisions) and then a separate approved implementation plan (ordered test-first tasks), each scrutinised by the design-reviewer agent and approved by a person before the next step.
 ---
 
 # Feature design: issue → system design → implementation plan
@@ -29,7 +29,8 @@ Read `.claude/profiles/feature-workflow.md`. If it is missing, create it with th
 
 - the features directory (default `features/`) and index file;
 - the issue tracker commands (default GitHub: `gh issue view/create`), labels, board;
-- branch naming (default `feature/<N>-<slug>`, `trivial/<slug>`) and the trivial threshold;
+- the **tracks**: branch naming (default `feature/<N>-<slug>` for small and full, `trivial/<slug>`),
+  the trivial threshold, and project-specific full-track triggers (read by `start-change`);
 - where the list of deployable parts comes from (a deps manifest, the solution, workspaces);
 - the specs directory, the ADR directory, template and index;
 - the system base diagram (`system-base.mmd`). Create it on first use: one node per
@@ -157,7 +158,9 @@ Then:
 - On merge: `status: implemented` in both documents, move the index row, and add the per-project
   history rows. `implemented` is terminal. A follow-up is a new feature or a trivial fix.
 
-## Trivial work
+## Tracks
 
-Under the profile's threshold (default: ≤ 100 changed lines in ≤ 2 projects, with an issue),
-use a trivial branch and skip this skill. If you are unsure, it is not trivial.
+This skill is the **full** track. The `start-change` skill routes work here, to `change-design`
+(small: one short document, one gate) or to a trivial branch with no document. A small change that
+is escalated arrives with a `design.md` whose §1 and §2 are already filled from its change.md:
+check them against the issue, then continue from *Where it fits*.
