@@ -1,6 +1,7 @@
 ---
 name: feature-design
 description: Use whenever someone asks for a full design, a system design, a design with sequence, data-flow or ER diagrams, or to escalate a small change to the full design, and whenever start-change routes work to the full track (migrations, contract changes, new consumers, jobs or services, boundary crossings, more than two deployables, new dependencies, auth changes, new multi-step flows). The full track of the feature workflow — no code without a written spec of what the change does, how we'll know it works, what it must not break and what on-call would need to debug it at 3 am — from an issue to an approved system design (the spec, where it fits, sequence, control, data-flow and data-model diagrams, affected parts, caveats, concurrency and idempotency, decisions) and then a separate approved implementation plan (ordered test-first tasks), each scrutinised by the design-reviewer agent and approved by a person before the next step.
+effort: high
 ---
 
 # Feature design: issue → system design → implementation plan

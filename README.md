@@ -35,6 +35,28 @@ first use.
 - **Evidence, not memory.** Every finding cites `path:line` or the query and the number it returned.
 - **Read-only by default.** Agents report; they never restart, redeploy, purge or edit production.
 
+## Model and effort
+
+Each agent gets the cheapest model that still does its job well. How bad a miss would be counts for
+more than the token bill. Models are named by alias, so agents move to new releases without edits.
+
+| Agent | Model | Effort | Why |
+|---|---|---|---|
+| `design-reviewer` | opus | high | Runs rarely, at each human gate. A missed contradiction or concurrency bug here becomes production code. |
+| `reliability-reviewer` | opus | high | Used during incidents. A wrong "it recovers on its own" verdict costs more than any token bill. |
+| `architecture-guardian` | sonnet | high | Runs before every backend merge and checks a diff against rules that are already written down. |
+| `ux-critic` | sonnet | medium | Screenshots and page text make up most of its tokens. Its judgment comes from the written craft standards. |
+| `docs-reconciler` | sonnet | low | Mechanical work: comparing documents with the code and fixing the wording. |
+
+Skills run in your conversation and keep **your** model, because a model set in a skill would
+silently override the one you picked. Four of them ask for `effort: high` where shallow reasoning
+produces confidently wrong output: `feature-design`, `grafana-investigate`, `review-hotspots` and
+`architecture-review`.
+
+To override the defaults, set `CLAUDE_CODE_SUBAGENT_MODEL` to run every subagent on one model, or copy an
+agent into `.claude/agents/` and change its `model:`. For an unusually risky design (money, auth, data
+loss), consider running `design-reviewer` on `fable`.
+
 ## Validation
 
 Every pull request runs `.github/workflows/validate.yml`; run the same checks locally before you push:
@@ -46,7 +68,8 @@ tools/validate.sh --fast   # skip the Mermaid render
 
 - **`claude plugin validate --strict`** on the marketplace and every plugin.
 - **`tools/validate_skills.py`**: skill and agent frontmatter (name matches folder, description within
-  1024 characters, body under 500 lines); every `references/`, `templates/` and `scripts/` path a skill
+  1024 characters, body under 500 lines, every agent names a known model, every effort is a known
+  level); every `references/`, `templates/` and `scripts/` path a skill
   mentions exists; every skill or agent named in prose exists; marketplace entries match each
   `plugin.json`; a plugin changed since `main` has bumped its version; both READMEs mention every skill
   and agent; the feature-workflow diagram palette is the same in the style guide, template and render

@@ -2,7 +2,8 @@
 name: architecture-guardian
 description: Reviews a diff, branch or PR for architecture-boundary and consistency violations — module and bounded-context boundaries, thin gateway, messaging delivery tiers, timeouts and cancellation, health checks, and the project's non-negotiable style rules — and returns a verdict with evidence. Use before merging any backend change, or when asked whether a change "follows the architecture".
 tools: Read, Grep, Glob, Bash
-model: inherit
+model: sonnet
+effort: high
 ---
 
 You are an architecture guardian. You review code against the project's rules: `AGENTS.md` /

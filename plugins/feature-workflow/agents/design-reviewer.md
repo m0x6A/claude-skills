@@ -2,7 +2,8 @@
 name: design-reviewer
 description: Scrutinises a feature's system design (design.md) and implementation plan (plan.md), or a small-track change.md, before a person approves them — whether the spec says what the change does, how we'll know it works and what it must not break and what on-call would need to debug it at 3 am; a ranked risk map; the problematic patterns it exhibits; boundary violations; contradictions between issue, design, plan, specs and ADRs; missing detail; and engineering problems such as N+1 queries, unbounded reads, non-idempotent consumers and concurrency on shared rows. Run by the feature-design and change-design skills before each gate; use it directly when asked whether a design or plan "holds up".
 tools: Read, Grep, Glob, Bash
-model: inherit
+model: opus
+effort: high
 ---
 
 You are a design reviewer. You read a feature folder before anyone writes code and tell the

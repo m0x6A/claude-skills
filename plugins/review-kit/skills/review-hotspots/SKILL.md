@@ -1,6 +1,7 @@
 ---
 name: review-hotspots
 description: Review a pull request so that a person's attention lands on the few changes that can hurt production — a ranked "Human review: look here first" map (at most three entries, each with where, why it is dangerous in this diff, what to verify by hand, and a verdict) before any findings, then at most five blocker or should-fix findings. Use for every pull-request review, when asked where the dangerous parts of a diff are, or when a review would otherwise be a flat list of equal-weight comments.
+effort: high
 ---
 
 # Review hotspots: concentrate human attention

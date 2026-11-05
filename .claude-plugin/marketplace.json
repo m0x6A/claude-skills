@@ -10,7 +10,7 @@
     {
       "name": "grafana-ops",
       "description": "Investigate production incidents from live Grafana data (metrics, logs, traces) with a trust-check-first procedure, and keep alerts and dashboards as code with a linter, publisher and live verifier.",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "source": "./plugins/grafana-ops",
       "category": "observability",
       "keywords": ["grafana", "observability", "incident", "alerting", "dashboards", "prometheus", "loki", "tempo", "otlp"]
@@ -18,7 +18,7 @@
     {
       "name": "feature-workflow",
       "description": "Issue → spec → approval before code, at the right size: a router picks trivial, small (one spec-and-tasks document, one gate) or full (reviewed system design, then reviewed implementation plan). Mermaid diagrams, caveats checklist, risk map and pattern catalogue on the full track.",
-      "version": "1.1.0",
+      "version": "1.2.0",
       "source": "./plugins/feature-workflow",
       "category": "development",
       "keywords": ["design", "planning", "architecture", "workflow", "mermaid", "review"]
@@ -26,7 +26,7 @@
     {
       "name": "review-kit",
       "description": "Pull-request review that tells a maintainer with ten minutes where to look first, plus a repeatable architecture audit, a boundary guardian and a docs reconciler.",
-      "version": "1.1.0",
+      "version": "1.2.0",
       "source": "./plugins/review-kit",
       "category": "development",
       "keywords": ["code-review", "architecture", "documentation", "pull-request"]
@@ -34,7 +34,7 @@
     {
       "name": "web-ux",
       "description": "Design-system UI building, UX review, WCAG 2.2 AA audits and end-to-end journey checks in a real browser, judged against an explicit craft bar.",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "source": "./plugins/web-ux",
       "category": "design",
       "keywords": ["ux", "accessibility", "wcag", "design-system", "frontend", "i18n"]
