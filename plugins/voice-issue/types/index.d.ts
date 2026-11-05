@@ -1,5 +1,6 @@
 export type Phase =
   | 'idle'
+  | 'setup'
   | 'recording'
   | 'transcribing'
   | 'drafting'
@@ -17,6 +18,8 @@ export type Session = {
   draft: Draft | null
   url: string | null
   error: string | null
+  setupLog: string[]
+  isSetupDone: boolean
 }
 
 declare module 'claude-code' {

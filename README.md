@@ -19,7 +19,7 @@ first use.
 | **review-kit** | `review-hotspots` (a "look here first" map, then at most five findings) · `architecture-review` | `architecture-guardian` · `docs-reconciler` | `.claude/profiles/review.md`, `.claude/profiles/architecture.md` (optional) |
 | **web-ux** | `design-system-ui` · `ux-review` · `a11y-audit` (WCAG 2.2 AA) · `user-journey-check` | `ux-critic` | `.claude/profiles/ux.md` |
 | **dotnet-messaging** | `masstransit-consumer` · `bff-gateway-endpoint` · `ef-core-migration` | — | your `AGENTS.md`/`CLAUDE.md` |
-| **voice-issue** (a mod) | `/voice-issue` and a 🎙 button above the prompt: speak, review the drafted issue, create it with `gh` | — | none; needs `pw-record`, `faster-whisper` and `gh` |
+| **voice-issue** (a mod) | `/voice-issue` and a 🎙 button above the prompt: speak, review the drafted issue, create it with `gh` | — | none; `/voice-issue setup` installs what it needs |
 
 ## Principles the skills share
 

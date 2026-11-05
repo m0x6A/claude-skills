@@ -31,6 +31,14 @@
         "sonnet",
         "opus"
       ]
+    },
+    "idleMinutes": {
+      "type": "number",
+      "title": "Keep Whisper loaded (minutes)",
+      "description": "How long the transcriber stays in memory after its last use before it exits by itself.",
+      "default": 10,
+      "min": 1,
+      "max": 240
     }
   }
 }
