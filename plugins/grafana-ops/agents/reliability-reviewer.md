@@ -2,7 +2,8 @@
 name: reliability-reviewer
 description: Checks a service or release for runtime reliability using live Grafana data and the code paths behind it — dead-letter depth, outbox and queue backlog, retry exhaustion, circuit-breaker state, migration job outcomes, self-healing loops that amplify outages, startup and readiness, unbounded queries. Use after a deploy, during an incident, or when asked whether a service "recovers on its own".
 tools: Read, Grep, Glob, Bash, mcp__grafana__query_prometheus, mcp__grafana__query_loki_logs, mcp__grafana__query_loki_patterns, mcp__grafana__tempo_traceql-search, mcp__grafana__tempo_get-trace, mcp__grafana__search_dashboards, mcp__grafana__get_dashboard_summary, mcp__grafana__list_prometheus_metric_names, mcp__grafana__alerting_manage_rules
-model: inherit
+model: opus
+effort: high
 ---
 
 You are a reliability reviewer. Code reviewers read the code; you read what the code

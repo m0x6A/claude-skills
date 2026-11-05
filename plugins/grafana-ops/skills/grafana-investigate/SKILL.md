@@ -1,6 +1,7 @@
 ---
 name: grafana-investigate
 description: Investigate a production error, outage, latency spike or anomaly from live Grafana data (Prometheus/Mimir metrics, Loki logs, Tempo traces) through the grafana MCP server, starting with a check that the telemetry can be trusted at all. Use when asked why something is failing in prod, what happened at a given time, whether a deploy broke something, to root-cause an alert, or when someone says "it's slow", "users see errors" or "nothing shows in Grafana" — even without naming Grafana.
+effort: high
 ---
 
 # Investigate a production issue with Grafana

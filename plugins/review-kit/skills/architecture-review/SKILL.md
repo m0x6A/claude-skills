@@ -1,6 +1,7 @@
 ---
 name: architecture-review
 description: Run a repeatable, evidence-first architecture audit of a backend — boundaries between modules or bounded contexts, gateway rules, messaging and delivery guarantees, continuity and self-healing (migrations, retries, health checks, startup), operability (could on-call debug the busiest flows at 3 am from logs, metrics and traces alone), error handling, configuration, and code organisation — producing a dated report with severities, a top-risk list and a map from finding to owning work. Use when reviewing a change that touches hosts, data access, messaging or composition, when asked whether the backend is "consistent", or to produce a periodic architecture report.
+effort: high
 ---
 
 # Architecture review

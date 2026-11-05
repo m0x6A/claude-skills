@@ -6,6 +6,7 @@
 
 `claude plugin validate` checks manifests and frontmatter shape. This checks what breaks a skill
 in practice: a reference to a template that is not there, a sibling skill or agent that was renamed,
+an agent without a deliberate model or with an unknown effort,
 a marketplace entry that drifted from its plugin.json, a plugin changed without a version bump (so
 nobody receives the change), a README that forgot a skill, and the feature-workflow diagram palette
 drifting between the style guide, the design template and the render page.
@@ -33,6 +34,9 @@ MAX_SKILL_LINES = 500
 # Skills and agents that live in other marketplaces and may be named in prose.
 EXTERNAL_NAMES = {"skill-creator", "frontend-design"}
 DIAGRAM_CLASSES = ("affected", "new", "quiet", "ext", "ok", "err")
+MODELS = {"inherit", "haiku", "sonnet", "opus", "fable"}
+MODEL_ID_RE = re.compile(r"^claude-[a-z0-9.-]+$")
+EFFORTS = {"low", "medium", "high", "xhigh", "max"}
 RENDER_SLOTS = ("<!--TITLE-->", "<!--ISSUE-->", "<!--DATE-->", "<!--MODEL-->", "<!--SHEETS-->")
 
 errors: list[tuple[Path | None, int, str]] = []
@@ -93,6 +97,7 @@ def check_skill(skill_md: Path) -> None:
     if "anthropic" in name or "claude" in name:
         error(skill_md, f"name '{name}' may not contain 'anthropic' or 'claude'", 2)
     check_description(skill_md, description)
+    check_effort(skill_md, fm)
     body_lines = len(skill_md.read_text(encoding="utf-8").split("\n")) - body_start
     if body_lines > MAX_SKILL_LINES:
         error(skill_md, f"body is {body_lines} lines; keep SKILL.md under {MAX_SKILL_LINES} and move detail to references/")
@@ -103,6 +108,18 @@ def check_agent(agent_md: Path) -> None:
     if fm.get("name") != agent_md.stem:
         error(agent_md, f"name '{fm.get('name', '')}' does not match its file name '{agent_md.stem}'", 2)
     check_description(agent_md, fm.get("description", ""))
+    model = fm.get("model", "")
+    if not model:
+        error(agent_md, "no model; choose one deliberately (see 'Model and effort' in README.md), or say inherit")
+    elif model not in MODELS and not MODEL_ID_RE.match(model):
+        error(agent_md, f"model '{model}' is not one of {', '.join(sorted(MODELS))} or a claude-* model id")
+    check_effort(agent_md, fm)
+
+
+def check_effort(path: Path, fm: dict[str, str]) -> None:
+    effort = fm.get("effort")
+    if effort is not None and effort not in EFFORTS:
+        error(path, f"effort '{effort}' is not one of {', '.join(sorted(EFFORTS))}")
 
 
 def check_description(path: Path, description: str) -> None:
