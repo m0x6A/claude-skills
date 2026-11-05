@@ -1,2 +1,5 @@
 __pycache__/
 *.pyc
+# Written by Claude Code when it loads a mod from this folder
+plugins/*/.claude-plugin/types/
+plugins/*/tsconfig.json

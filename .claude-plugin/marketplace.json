@@ -46,6 +46,14 @@
       "source": "./plugins/dotnet-messaging",
       "category": "development",
       "keywords": ["dotnet", "masstransit", "rabbitmq", "efcore", "bff", "microservices"]
+    },
+    {
+      "name": "voice-issue",
+      "description": "Speak a note; it is transcribed locally and drafted into a structured GitHub issue you review before it is created.",
+      "version": "0.1.0",
+      "source": "./plugins/voice-issue",
+      "category": "productivity",
+      "keywords": ["voice", "speech", "whisper", "github", "issues", "mod"]
     }
   ]
 }
