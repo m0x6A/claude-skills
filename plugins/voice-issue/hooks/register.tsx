@@ -88,14 +88,22 @@ Answer with one JSON object and nothing else:
 {"title": string, "body": string, "labels": string[]}
 
 - title: imperative or descriptive, under 72 characters, no trailing period.
-- body: GitHub Markdown using only the sections the note gives material for, in this order:
-  "## Summary" (one or two sentences, always present),
-  "## Context" (why, background, where it happens),
-  "## Current behaviour" and "## Expected behaviour" (for bugs),
-  "## Steps to reproduce" (numbered, for bugs),
-  "## Proposal" (for features or changes),
-  "## Acceptance criteria" (a "- [ ]" checklist of observable outcomes),
-  "## Open questions" (things the speaker was unsure about).
+- body: GitHub Markdown that someone can take straight into planning. Keep it short and
+  plain; it is a starting point for a plan, not the plan. Sections, in this order:
+  "## Summary" (one or two sentences; always present),
+  "## What the change does" (always present: the behaviour after the change, in a few
+    bullets; for a bug, what happens now and what should happen instead),
+  "## How we'll know it works" (always present: a "- [ ]" checklist of observable
+    outcomes someone could check by hand or with a test),
+  "## What it must not break" (always present: existing behaviour, users or integrations
+    that must keep working),
+  "## Context" (optional: why, background, where it happens),
+  "## Steps to reproduce" (optional, numbered, for bugs),
+  "## Open questions" (optional: things the speaker was unsure about).
+  The three middle sections are always present even when the note says nothing for them:
+  then write exactly "_Not covered in the note; settle this in planning._" as the section
+  body instead of guessing. Only fill them from what the speaker said or what follows
+  directly from it; omit the optional sections when the note gives no material for them.
 - labels: zero or more names chosen ONLY from the repository's labels listed in the prompt.`
 
 type Running = { wav: string; ended: Promise<void> }
