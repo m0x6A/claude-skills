@@ -14,7 +14,7 @@ belong in the project's database-migrations doc or guidance file. Read it first.
      --project <path to the Data project that owns the DbContext> \
      --startup-project <path to the migration runner or host>
    ```
-   Use a name that says what changes (`AddUserAvatarUrl`), not `Update3`.
+   Use a name that says what changes (`AddMerchantLogoUrl`), not `Update3`.
 2. **Read the generated code.** Check that it does only what you meant: no unintended drops, renames
    shown as drop-and-add (fix with `RenameColumn`), or type changes. **Never edit, reorder or rename
    a migration that has merged.** Write a new one. Check the model snapshot diff too.

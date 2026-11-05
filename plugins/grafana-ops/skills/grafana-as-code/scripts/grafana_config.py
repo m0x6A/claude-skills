@@ -376,3 +376,32 @@ def config_from_dict(data: dict, path: str | os.PathLike) -> Config:
         allowed_variables=allowed_variables,
         grid_columns=grid_columns,
     )
+
+
+# --- Prune safety -----------------------------------------------------------------------
+
+MASS_PRUNE_FLAG = "--allow-mass-prune"
+
+
+def prune_refusal(kind: str, pushed: int, live_ours: int, to_delete: int,
+                  allow_mass: bool = False) -> str | None:
+    """Why a prune must not run, or None when it is safe.
+
+    `--prune` deletes what the repository no longer defines, so a repository that
+    *looks* empty deletes everything: an emptied or wrongly configured directory, a
+    checkout that missed the files, alert files whose groups hold no rules. Two guards:
+
+    1. nothing was pushed -> never prune (there is no repository state to converge to);
+    2. the prune would delete more than half of this app's live items (and more than two)
+       -> refuse unless MASS_PRUNE_FLAG is passed, so a deliberate clean-up stays possible
+       but has to be asked for.
+    """
+    if to_delete == 0:
+        return None
+    if pushed == 0:
+        return (f"refusing to prune: no {kind} were published from the repository, so the prune "
+                f"would delete all {to_delete} live {kind}. Check the directory in the config.")
+    if not allow_mass and to_delete > 2 and to_delete * 2 > live_ours:
+        return (f"refusing to prune: it would delete {to_delete} of {live_ours} live {kind}. "
+                f"If that is intended, rerun with {MASS_PRUNE_FLAG}.")
+    return None

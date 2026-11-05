@@ -23,8 +23,8 @@ Details: `references/alerts.md` (rule shape, conventions, failure modes) and
 | Command | What it does |
 |---|---|
 | `python3 scripts/lint.py [--config PATH]` | Offline, no credentials. Prints one `ERROR:` line per problem and exits 1 if there are any. This is the CI gate. |
-| `python3 scripts/publish_dashboards.py [--config PATH] [--dry-run] [--prune] [NAME ...]` | Pushes dashboards; datasource names are resolved to `{type, uid}`. |
-| `python3 scripts/publish_alerts.py [--config PATH] [--dry-run] [--prune] [--skip-contact-point] [NAME ...]` | Pushes rules (provenance `api`), resolves placeholders, provisions the contact point from the env var the config names. |
+| `python3 scripts/publish_dashboards.py [--config PATH] [--dry-run] [--prune [--allow-mass-prune]] [NAME ...]` | Pushes dashboards; datasource names are resolved to `{type, uid}`. |
+| `python3 scripts/publish_alerts.py [--config PATH] [--dry-run] [--prune [--allow-mass-prune]] [--skip-contact-point] [--adopt-contact-point] [NAME ...]` | Pushes rules (provenance `api`), resolves placeholders, provisions the contact point from the env var the config names. |
 | `python3 scripts/verify_live.py [--config PATH] [--alerts-only \| --panels-only] [--strict] [--lookback 30d]` | `--alerts-only` fails if any of this app's rules is in error or missing; the panel check is advisory unless `--strict`. |
 | `python3 -m unittest discover -s scripts/tests` | The tooling's own tests. |
 
@@ -32,6 +32,15 @@ Behaviours worth knowing: unknown config keys are an error, so a typo cannot sil
 check (keys starting with `_` are comments). A missing optional key disables its check with a
 one-line `notice:`. `--prune` is refused unless both `folder` and the uid prefix are set, and it is
 ignored when names are passed.
+
+Safety guards (the publish fails rather than destroys):
+- **Prune never runs when nothing was published.** An empty directory, or files with no
+  rules, would otherwise delete everything. No flag overrides this.
+- **Prune stops before deleting more than half of the app's live items** (and more than two).
+  A deliberate clean-up passes `--allow-mass-prune`, run by a person, not added to CI.
+- **The contact point is only overwritten if this tool provisioned it** (provenance `api`).
+  One of the same name made in the UI may belong to another team: rename yours, or pass
+  `--adopt-contact-point` once if it really is yours.
 
 All four read `grafana-as-code.json` (`--config PATH`, or `GRAFANA_AS_CODE_CONFIG`,
 or the nearest one walking up from the working directory). Credentials come only

@@ -180,10 +180,31 @@ def rules_to_prune(existing: list[dict], repo_uids: set[str], folder_uid: str, p
     )
 
 
-def ensure_contact_point(base: str, token: str, payload: dict) -> None:
+def contact_point_refusal(existing: list[dict], name: str, adopt: bool) -> str | None:
+    """Why an existing contact point of this name must not be overwritten, or None.
+
+    The lookup is by name, and names are not owned: on a shared stack another team may
+    already have a contact point called the same thing, made in the UI. Overwriting it
+    would silently redirect their alerts. Only a contact point provisioned through the
+    API (provenance "api", which is what this script creates) is updated without asking;
+    anything else needs --adopt-contact-point.
+    """
+    if not existing or adopt:
+        return None
+    if any((cp.get("provenance") or "") != "api" for cp in existing):
+        return (f"refusing to overwrite contact point '{name}': it exists but was not provisioned "
+                "through the API (it may belong to someone else). Rename contact_point.name, or rerun "
+                "with --adopt-contact-point if it is yours.")
+    return None
+
+
+def ensure_contact_point(base: str, token: str, payload: dict, adopt: bool = False) -> None:
     name = payload["name"]
     query = urllib.parse.urlencode({"name": name})
     existing = api(base, token, f"/api/v1/provisioning/contact-points?{query}") or []
+    refusal = contact_point_refusal(existing, name, adopt)
+    if refusal:
+        sys.exit(f"ERROR: {refusal}")
     if existing:
         uid = existing[0]["uid"]
         api(base, token, f"/api/v1/provisioning/contact-points/{uid}", payload, method="PUT")
@@ -217,6 +238,11 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--config", help="path to grafana-as-code.json")
     parser.add_argument("--prune", action="store_true",
                         help="delete rules in the folder with the uid prefix that no file defines any more")
+    parser.add_argument(grafana_config.MASS_PRUNE_FLAG, dest="allow_mass_prune", action="store_true",
+                        help="let --prune delete more than half of this app's live rules")
+    parser.add_argument("--adopt-contact-point", action="store_true",
+                        help="take over an existing contact point of the same name that was not "
+                             "provisioned through the API (for example one made in the UI)")
     parser.add_argument("--skip-contact-point", action="store_true",
                         help="do not provision the contact point (local runs without its secret)")
     parser.add_argument("--dry-run", action="store_true",
@@ -284,7 +310,7 @@ def main(argv: list[str] | None = None) -> None:
 
     # 3. The contact point every rule routes to.
     if contact_payload is not None:
-        ensure_contact_point(base, token, contact_payload)
+        ensure_contact_point(base, token, contact_payload, args.adopt_contact_point)
 
     # 4. Upsert every rule in every group, then set the group interval.
     pushed: set[str] = set()
@@ -318,7 +344,15 @@ def main(argv: list[str] | None = None) -> None:
     # 5. Prune rules that left the repository (only ours, only in our folder).
     if args.prune and not args.names and config.rule_uid_prefix:
         existing = api(base, token, "/api/v1/provisioning/alert-rules") or []
-        for uid in rules_to_prune(existing, pushed, folder_uid, config.rule_uid_prefix):
+        doomed = rules_to_prune(existing, pushed, folder_uid, config.rule_uid_prefix)
+        live_ours = sum(1 for rule in existing
+                        if rule.get("folderUID") == folder_uid
+                        and str(rule.get("uid", "")).startswith(config.rule_uid_prefix))
+        refusal = grafana_config.prune_refusal("alert rules", len(pushed), live_ours, len(doomed),
+                                               args.allow_mass_prune)
+        if refusal:
+            sys.exit(f"ERROR: {refusal} Would delete: {', '.join(doomed)}")
+        for uid in doomed:
             api(base, token, f"/api/v1/provisioning/alert-rules/{uid}", method="DELETE")
             print(f"pruned:   {uid}")
 

@@ -130,6 +130,8 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--config", help="path to grafana-as-code.json")
     parser.add_argument("--prune", action="store_true",
                         help="delete dashboards in the folder with the uid prefix that no file defines any more")
+    parser.add_argument(grafana_config.MASS_PRUNE_FLAG, dest="allow_mass_prune", action="store_true",
+                        help="let --prune delete more than half of this app's live dashboards")
     parser.add_argument("--dry-run", action="store_true",
                         help="print the payloads that would be sent; no network access")
     args = parser.parse_args(argv)
@@ -203,7 +205,13 @@ def main(argv: list[str] | None = None) -> None:
     if args.prune and not args.names and can_prune:
         query = urllib.parse.urlencode({"type": "dash-db", "folderUIDs": folder_uid, "limit": 5000})
         existing = api(base, token, f"/api/search?{query}") or []
-        for uid in dashboards_to_prune(existing, pushed, config.dashboard_uid_prefix):
+        doomed = dashboards_to_prune(existing, pushed, config.dashboard_uid_prefix)
+        live_ours = sum(1 for item in existing if str(item.get("uid", "")).startswith(config.dashboard_uid_prefix))
+        refusal = grafana_config.prune_refusal("dashboards", len(pushed), live_ours, len(doomed),
+                                               args.allow_mass_prune)
+        if refusal:
+            sys.exit(f"ERROR: {refusal} Would delete: {', '.join(doomed)}")
+        for uid in doomed:
             api(base, token, f"/api/dashboards/uid/{uid}", method="DELETE")
             print(f"pruned:   {uid}")
 

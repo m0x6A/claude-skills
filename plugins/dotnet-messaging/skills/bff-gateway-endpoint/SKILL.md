@@ -21,7 +21,7 @@ authorisation policies, belong in the project's guidance file. Read it first.
    `CancellationToken.None` is a review blocker.
 4. **Fault mapping.** `RequestTimeoutException` → 504. A `RequestFaultException` is classified by
    the fault's exception type (`ex.Fault?.Exceptions` → `ExceptionType`), wrapped once in a helper
-   such as `WasCausedBy<T>()`: not found → 404, concurrency conflict → 409, unauthorised → 403,
+   such as `IsFaultOf<T>()`: not found → 404, concurrency conflict → 409, unauthorised → 403,
    dependency unavailable → 503, rate limited → 429, anything else → 500. **Never inspect
    `ex.Message`.** Errors are `Results.Problem(...)` (RFC 7807); successes are the DTO.
    Alternatively, return typed result unions from the consumer (`GetResponse<TOk, TNotFound>`)
