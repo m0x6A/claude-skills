@@ -1,10 +1,5 @@
-<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="claude:viewport-fit-sides" content="cover">
 <title><!--TITLE--></title>
+<meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Mono:wght@400;500&family=Atkinson+Hyperlegible+Next:wght@400;600;700&display=swap">
@@ -41,7 +36,8 @@
   body {
     margin: 0; background: var(--paper); color: var(--ink);
     font: 400 16px/1.55 var(--font); font-variant-numeric: tabular-nums;
-    padding: 40px max(16px, env(safe-area-inset-right, 0px)) 64px max(16px, env(safe-area-inset-left, 0px));
+    padding-block: 40px 64px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
   }
   main { max-width: 1180px; margin: 0 auto; }
   code, .mono { font-family: var(--mono); font-size: 0.9em; }
@@ -106,7 +102,10 @@
   .failed pre { white-space: pre-wrap; font: 0.85rem/1.5 var(--mono); margin: 10px 0 0; color: var(--graphite); }
 
   /* The bar stays in reach on wide screens; on a phone it would cover a third of the view. */
-  @media (min-width: 760px) { .bar { position: sticky; top: 0; } }
+  @media (min-width: 760px) {
+    .bar { position: sticky; top: env(safe-area-inset-top, 0px); }
+    body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--paper); }
+  }
   @media (max-width: 640px) {
     .titleblock { grid-template-columns: auto 1fr; }
     .titleblock .ref { display: none; }
@@ -115,8 +114,6 @@
     .canvas { padding: 20px 12px; }
   }
 </style>
-</head>
-<body>
 <main>
   <header class="cover">
     <h1><!--TITLE--></h1>
@@ -293,5 +290,3 @@
   new MutationObserver(draw).observe(root, { attributes: true, attributeFilter: ['data-theme'] });
   document.fonts.ready.then(draw);
 </script>
-</body>
-</html>
