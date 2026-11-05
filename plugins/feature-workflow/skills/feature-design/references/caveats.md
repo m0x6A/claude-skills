@@ -15,7 +15,7 @@ not break*, with its guard.
 | Schema change and rollback | Which migration, is it additive, what is the rollback, is there a backfill (batched, resumable)? | the migrations folder and its conventions |
 | Contract compatibility | Does any existing API, message or event gain a required field, lose a field, or change meaning? Who compiles or consumes it? | the contracts, generated clients, the fan-out tool |
 | Authorisation and tenancy | Which policy guards each new entry point? How is the tenant/owner resolved? Can a user reach another tenant's data? | the auth policies, the tenant resolution code |
-| Observability | What is the new failure mode, which log line or metric shows it, which dashboard or alert needs a change? | the telemetry setup, dashboards/alerts as code |
+| Observability (the 3 am question) | If you were on call at 3 am and this broke, what would you need to solve it? For each new failure mode: what alerts or shows it, which log line (with which ids), metric or trace span localises it, which dashboard or alert changes. The answers become §2.4 rows. | the telemetry setup (correlation id, span names, log fields), dashboards/alerts as code |
 | Cost | Storage, external calls (AI, SaaS), egress, new cloud resources, per-request fan-out? | the cost dashboard or budget notes |
 | Testability | Can every statement in §2.1 and every guard in §2.3 be observed by a test or a check? Which seam (clock, provider, fake)? | the test projects, existing fakes |
 

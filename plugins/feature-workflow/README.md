@@ -1,7 +1,8 @@
 # feature-workflow
 
-No code without a written spec, at the size the change deserves. Every change answers three
-questions before code: *what it does*, *how we'll know it works* and *what it must not break*.
+No code without a written spec, at the size the change deserves. Every change answers four
+questions before code: *what it does*, *how we'll know it works*, *what it must not break* and
+*how we'd debug it at 3 am* (if you were on call and it broke, what observability would you need?).
 How much gets written down to prove that depends on the track.
 
 ## Tracks
@@ -31,12 +32,13 @@ Takes a feature from an issue to two documents in `features/<N>-<slug>/`, each r
 `design-reviewer` agent and approved by a person before the next step:
 
 1. **design.md** opens with the spec: *what the change does* (S1, S2, …), *how we'll know it works*
-   (the evidence for each statement), and *what it must not break* (N1, N2, …, each with its guard). Then
+   (the evidence for each statement), and *what it must not break* (N1, N2, …, each with its guard), and *how we'd debug it at 3 am* (O1, O2, …: failure, how we find out, the
+   signal that localises it, the first action). Then
    the system map with affected parts highlighted, sequence, control-flow, data-flow, ER and state
    diagrams, affected parts, a caveats checklist (a core list plus messaging, gateway, web, data and AI
    packs), concurrency and idempotency tables, and numbered decisions.
 2. **plan.md** lists ordered, test-first tasks, each tied to spec items, and a verification section that
-   proves every "works" and "must not break" row.
+   proves every "works", "must not break" and "3 am" row.
 
 The reviewer leads with a spec check, a ranked risk map and the problematic patterns it sees
 (`references/patterns.md`), then at most seven findings, checked against the real code.

@@ -15,7 +15,9 @@ and hands off. It writes nothing itself.
 | **full** | `design.md` then `plan.md`, diagrams, caveat packs, two reviews, two approvals | `feature-design` |
 
 All three keep the same rule: no code without knowing what the change does, how we'll know it
-works and what it must not break. The tracks differ in how much is written down to prove it.
+works, what it must not break, and **how we'd debug it at 3 am**: if you were on call and this
+broke, what observability would you need to solve it? The tracks differ in how much is written down
+to prove it.
 
 ## Procedure
 
@@ -35,7 +37,8 @@ works and what it must not break. The tracks differ in how much is written down 
    - `Track: small — Orders.Api only, ~150 lines, no contract, migration or consumer change. OK, or trivial/full?`
    - `Track: full — adds a column to orders (migration) and a field to OrderPlaced, consumed by Billing. OK?`
 5. **Hand off.**
-   - trivial → branch per the profile (default `trivial/<slug>`), fix test first, no document.
+   - trivial → branch per the profile (default `trivial/<slug>`), fix test first, no document. The PR
+     description carries one line: `3 am: <the signal that shows this failing, or the one you added>`.
    - small → follow the `change-design` skill.
    - full → follow the `feature-design` skill from Stage 1 (the issue is already read).
 

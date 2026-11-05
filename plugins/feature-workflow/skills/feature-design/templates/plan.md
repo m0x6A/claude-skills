@@ -17,7 +17,7 @@ touches: []
 Issue: #<issue> · Design: [design.md](design.md) · Branch: `feature/<issue>-<slug>`
 
 Every task names the failing test written first, the files it touches, the spec items it serves
-(S/N numbers from design §2), and the skill to use. Tick tasks as they land.
+(S/N/O numbers from design §2), and the skill to use. Tick tasks as they land.
 
 ## 0. Spec at a glance
 
@@ -26,6 +26,7 @@ Every task names the failing test written first, the files it touches, the spec 
 - **Does:** S1 …; S2 …
 - **We'll know it works when:** <the evidence from design §2.2, one line per item>
 - **Must not break:** N1 …; N2 …
+- **Debug at 3 am:** O1 <failure> → <signal>; O2 …
 
 ## 1. <Project, e.g. contracts and handler>
 
@@ -52,7 +53,7 @@ Every task names the failing test written first, the files it touches, the spec 
 
 ## 5. Verification: proving the spec
 
-<!-- Every row of design §2.2 and §2.3 appears here with the task that produces its evidence.
+<!-- Every row of design §2.2, §2.3 and §2.4 appears here with the task that produces its evidence.
      The PR is not ready until every box is ticked. -->
 
 **It works** (design §2.2)
@@ -68,6 +69,12 @@ Every task names the failing test written first, the files it touches, the spec 
 |---|---|---|---|
 | N1 | existing `<Test>` still green / new regression `<Test>` | 1.2 | [ ] |
 | N2 | <check> | | [ ] |
+
+**We could debug it at 3 am** (design §2.4)
+
+| # | Signal (log, metric, span, alert) | Task | How it is checked | Done |
+|---|---|---|---|---|
+| O1 | <log `Event {fields}` / metric / alert rule> | 1.3 | <test asserts it is emitted / alert linted / seen in staging> | [ ] |
 
 - [ ] Full test commands: ...
 - [ ] Journey: ...

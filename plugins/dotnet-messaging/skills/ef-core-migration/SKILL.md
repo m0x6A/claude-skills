@@ -32,8 +32,17 @@ belong in the project's database-migrations doc or guidance file. Read it first.
 6. **Registration.** Register the DbContext through one shared helper that enables retry on
    transient failure (`EnableRetryOnFailure`). No `OnConfiguring` fallback to a hard-coded
    connection string.
-7. **Test against a real database** (Testcontainers PostgreSQL, or the local Aspire database):
+7. **The 3 am question.** Ask: *if I were on call at 3 am and this migration had stalled or failed,
+   what would I need to solve it?* The runner logs each migration's name at start and end with the
+   elapsed time, and fails loudly (non-zero exit, a failed job the platform alerts on) rather than
+   letting hosts start against a half-applied schema. A host that waits for the runner logs what it
+   is waiting for. A migration that can hold a lock logs before it takes it, and the lock wait is
+   visible (statement or lock timeout set, so it fails rather than hangs). A backfill reports
+   progress (rows done, last key) as a log or metric, so on-call can tell slow from stuck and
+   resume from the last key. Know the one query that shows what is applied
+   (`SELECT "MigrationId" FROM "__EFMigrationsHistory" ORDER BY 1 DESC LIMIT 5`).
+8. **Test against a real database** (Testcontainers PostgreSQL, or the local Aspire database):
    apply the migration from the previous release's schema, run the affected tests, and roll back
    if you have a down path.
-8. **Ship.** Bump the runner's version, and that of every deployable that compiles the Data project.
+9. **Ship.** Bump the runner's version, and that of every deployable that compiles the Data project.
    Sensitive tables (credentials, audit logs, PII) get a second reviewer.

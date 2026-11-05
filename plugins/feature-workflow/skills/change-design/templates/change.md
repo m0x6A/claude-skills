@@ -46,6 +46,15 @@ Prior art: <older design, ADR or closed issue on the same ground, or "none">
 |---|---|---|
 | N1 | <closest neighbour: an existing caller, screen, contract or guarantee> | existing `<Test>` (opened, exercises it) / new `<Test>` |
 
+### 2.4 How we'll debug it at 3 am
+
+<!-- If I were on call at 3 am and this broke, what observability would I need to solve it?
+     An existing signal that already covers the path is a fine answer: name it. -->
+
+| # | When this fails | How we find out | What localises it | What it tells us · first action |
+|---|---|---|---|---|
+| O1 | <failure mode, e.g. the call to Payments times out> | <alert and threshold, or the symptom a user reports> | <log line with its fields (ids, correlation/trace id, elapsed), metric with labels, trace span> | <which record, which dependency, which step · what on-call does first> |
+
 ## 3. Where it changes
 
 - `<project>` — `<path>`: <what changes, one line>
@@ -65,6 +74,8 @@ Prior art: <older design, ADR or closed issue on the same ground, or "none">
   - Files: `<path>`
 - [ ] **T2** — guard for N1 · serves N1
   - Test: `<TestClass.Method>` — passes today; pins <existing behaviour>
+- [ ] **T3** — signal for O1 (only if it does not exist yet) · serves O1
+  - Test first: `<TestClass.Method>` asserts <log line / metric> is emitted on <failure>
 
 ## 6. Verification
 

@@ -27,9 +27,9 @@ Issue: #<issue> · Plan: [plan.md](plan.md)
 
 ## 2. Spec
 
-<!-- No code without this section. Three questions, each answered so that someone who has not
+<!-- No code without this section. Four questions, each answered so that someone who has not
      read the rest of the document could check it. A reviewer blocks the design if any of the
-     three is missing, vague ("works correctly", "nothing breaks") or untestable. -->
+     four is missing, vague ("works correctly", "nothing breaks") or untestable. -->
 
 ### 2.1 What the change does
 
@@ -61,6 +61,16 @@ Issue: #<issue> · Plan: [plan.md](plan.md)
 |---|---|---|
 | N1 | <existing behaviour or contract, e.g. old clients still read the response> | existing `<Test>` / new `<Test>` / check |
 | N2 | <data or invariant, e.g. existing rows keep their values through the migration> | |
+
+### 2.4 How we'll debug it at 3 am
+
+<!-- If I were on call at 3 am and this broke, what observability would I need to solve it?
+     One row per realistic failure mode (from the control flow and the caveats). On-call has the
+     dashboards, logs and traces, not the code. Each signal is produced by a plan task. -->
+
+| # | When this fails | How we find out | What localises it | What it tells us · first action |
+|---|---|---|---|---|
+| O1 | <failure mode, e.g. the call to Payments times out> | <alert and threshold, or the symptom a user reports> | <log line with its fields (ids, correlation/trace id, elapsed), metric with labels, trace span> | <which record, which dependency, which step · what on-call does first> |
 
 ## 3. Where it fits
 
@@ -166,7 +176,7 @@ stateDiagram-v2
 
 <!-- Every row from references/caveats.md (core + the profile's packs + project rows),
      answered or "n/a — reason", with the file you opened. A caveat that names something existing
-     the change could break also belongs in 2.3. -->
+     the change could break also belongs in 2.3; a new failure mode belongs in 2.4. -->
 
 | Caveat | Answer |
 |---|---|

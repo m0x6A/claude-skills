@@ -1,6 +1,6 @@
 ---
 name: masstransit-consumer
-description: Add or fix a MassTransit consumer and its host wiring in .NET — choose the delivery guarantee (transactional outbox and inbox vs idempotent-by-key), design additive message contracts, keep consumers stateless across replicas, respond on every path for request/response but never for published messages, rethrow instead of swallowing, forward cancellation, register dependency health checks, and prove idempotency with a redelivery test. Use when creating a consumer or message contract, choosing outbox settings, or debugging duplicate, lost, stuck or dead-lettered messages.
+description: Add or fix a MassTransit consumer and its host wiring in .NET — choose the delivery guarantee (transactional outbox and inbox vs idempotent-by-key), design additive message contracts, keep consumers stateless across replicas, respond on every path for request/response but never for published messages, rethrow instead of swallowing, forward cancellation, register dependency health checks, make failures debuggable at 3 am (error-queue alert, structured logs with message id and business key, an unbroken trace), and prove idempotency with a redelivery test. Use when creating a consumer or message contract, choosing outbox settings, or debugging duplicate, lost, stuck or dead-lettered messages.
 ---
 
 # MassTransit consumer
@@ -71,17 +71,39 @@ Pass `context.CancellationToken` into every repository, HTTP and publish call.
 - Options validated on start: `ValidateDataAnnotations().ValidateOnStart()`.
 - External calls (AI, HTTP) through a resilience pipeline (timeout, retry with backoff, circuit breaker).
 
-## 8. Tests (write the failing test first)
+## 8. The 3 am question
+
+Before the tests, ask: *if I were on call at 3 am and this consumer was failing, what observability
+would I need to solve it?* With only dashboards, logs and traces, on-call must be able to tell:
+
+- **that it is failing**: the error (`_error`) queue for this endpoint has a depth metric and an
+  alert, and retries are visible (a retry count or a log per attempt), not silent;
+- **which message and which record**: failures log at Warning/Error with the message id,
+  correlation id and the business key (order id, user id) as structured fields; the fault that lands
+  in the error queue carries the exception, so the reason travels with the message;
+- **where in the flow**: the trace continues from the publisher or gateway through the consumer
+  (MassTransit's OpenTelemetry source registered), and calls to the database and external services
+  appear as child spans;
+- **what to do first**: a duplicate dropped by the inbox or by idempotency logs once at Information
+  ("already processed <key>"), so a "missing" side effect can be told apart from a lost message;
+  the runbook line says whether moving the error queue back is safe (it is, if the consumer is
+  idempotent).
+
+A missing signal from this list is part of the change, not a follow-up.
+
+## 9. Tests (write the failing test first)
 
 - Use the MassTransit test harness (`AddMassTransitTestHarness`), or substitute `ConsumeContext<T>`
   (`Message`, `CancellationToken`, `Headers`).
 - Assert publishes (`harness.Published.Any<TEvent>()`), and assert `RespondAsync` on every path for
   request/response consumers.
+- **One failure-signal test**: on the failure path, assert the log carries the message id and business
+  key (log capture or a fake logger), so the 3 am signal cannot silently disappear.
 - **One redelivery test**: the same message twice, then assert the outcome happened once. For the
   outbox tier, run it with the production endpoint configuration, so that the test proves the inbox
   is attached.
 
-## 9. Ship
+## 10. Ship
 
 Bump the version of every deployable that compiles a changed contracts project. If the DbContext
 changed, follow `ef-core-migration`.

@@ -26,15 +26,21 @@ authorisation policies, belong in the project's guidance file. Read it first.
    `ex.Message`.** Errors are `Results.Problem(...)` (RFC 7807); successes are the DTO.
    Alternatively, return typed result unions from the consumer (`GetResponse<TOk, TNotFound>`)
    so expected outcomes are not faults at all.
-5. **Logging.** `ILogger<THandler>`; log faults at Warning with the correlation id. A
-   `catch (Exception) { return 500; }` without a log is a blocker.
+5. **Logging and the 3 am question.** Ask: *if I were on call at 3 am and this endpoint failed, what
+   would I need to solve it?* `ILogger<THandler>`; log faults at Warning with the correlation id, the
+   target request type, the elapsed time and the mapped status, as structured fields, not
+   interpolated text. Return the trace id in the problem details (`traceId`) so a user report leads to
+   the trace. Keep the trace flowing through the request client (MassTransit's OpenTelemetry source
+   on both sides), so one trace shows gateway → broker → consumer. A timeout names the service that
+   did not answer. A `catch (Exception) { return 500; }` without a log is a blocker.
 6. **Contracts.** After changing a request or response type, regenerate the frontend's types with
    the project's generator. Never hand-write them.
 7. **Route.** `MapGet`/`MapPost` in the area's endpoint extension, `.RequireAuthorization(<policy>)`
    matching the project's policies, the target id taken from the route (never trusted from the
    body), and OpenAPI metadata (`.Produces<TDto>()`, `.ProducesProblem(...)`).
 8. **Tests** (failing first): substitute `IRequestClient<T>`. Assert the status for the happy path,
-   for a timeout and for each mapped fault. Assert the token is forwarded
+   for a timeout and for each mapped fault, and that the timeout and fault paths log with the
+   correlation id (a fake logger or log capture). Assert the token is forwarded
    (`Arg.Is<CancellationToken>(t => t == token)`). Add an architecture test that the gateway assembly
    references no data-access package.
 9. **Ship**: format, test, and bump the gateway's version (and the frontend's if its types changed).

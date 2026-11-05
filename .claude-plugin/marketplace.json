@@ -26,7 +26,7 @@
     {
       "name": "review-kit",
       "description": "Pull-request review that tells a maintainer with ten minutes where to look first, plus a repeatable architecture audit, a boundary guardian and a docs reconciler.",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "source": "./plugins/review-kit",
       "category": "development",
       "keywords": ["code-review", "architecture", "documentation", "pull-request"]
@@ -42,7 +42,7 @@
     {
       "name": "dotnet-messaging",
       "description": "MassTransit consumers (outbox tiers, idempotency, respond-or-publish), thin BFF gateway endpoints over request clients, and safe EF Core migrations.",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "source": "./plugins/dotnet-messaging",
       "category": "development",
       "keywords": ["dotnet", "masstransit", "rabbitmq", "efcore", "bff", "microservices"]
