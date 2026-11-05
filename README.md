@@ -35,6 +35,25 @@ first use.
 - **Evidence, not memory.** Every finding cites `path:line` or the query and the number it returned.
 - **Read-only by default.** Agents report; they never restart, redeploy, purge or edit production.
 
+## Validation
+
+Every pull request runs `.github/workflows/validate.yml`; run the same checks locally before you push:
+
+```bash
+tools/validate.sh          # everything (the Mermaid render needs Node and Chrome)
+tools/validate.sh --fast   # skip the Mermaid render
+```
+
+- **`claude plugin validate --strict`** on the marketplace and every plugin.
+- **`tools/validate_skills.py`**: skill and agent frontmatter (name matches folder, description within
+  1024 characters, body under 500 lines); every `references/`, `templates/` and `scripts/` path a skill
+  mentions exists; every skill or agent named in prose exists; marketplace entries match each
+  `plugin.json`; a plugin changed since `main` has bumped its version; both READMEs mention every skill
+  and agent; the feature-workflow diagram palette is the same in the style guide, template and render
+  page; JSON, YAML and Python parse.
+- **`tools/check_mermaid.py`**: every Mermaid diagram in the repository renders.
+- **Script tests**: each skill's `scripts/tests` suite.
+
 ## Complements (install from their own marketplaces)
 
 - Grafana's official skills (`promql`, `loki`, `tempo`, `dashboarding`, `alerting-irm`):

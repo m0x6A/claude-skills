@@ -14,6 +14,12 @@ Run production investigations from live Grafana data, and keep alerts and dashbo
 - **reliability-reviewer** agent: dead letters, outbox backlog, self-healing loops, readiness, and
   breakers, traced back to `path:line`.
 
+## Install
+
+```
+/plugin install grafana-ops --marketplace m0x6A/claude-skills
+```
+
 ## Setup
 
 Run the [Grafana MCP server](https://github.com/grafana/mcp-grafana) with `GRAFANA_URL` and a

@@ -5,6 +5,12 @@ questions before code: *what it does*, *how we'll know it works*, *what it must 
 *how we'd debug it at 3 am* (if you were on call and it broke, what observability would you need?).
 How much gets written down to prove that depends on the track.
 
+## Install
+
+```
+/plugin install feature-workflow --marketplace m0x6A/claude-skills
+```
+
 ## Tracks
 
 `start-change` reads the issue and the code, proposes a track in one line with the signal that

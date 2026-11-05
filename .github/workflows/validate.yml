@@ -1,0 +1,85 @@
+name: Validate
+
+# Every pull request and every push to main proves the marketplace is installable and every skill
+# is internally consistent. `tools/validate.sh` runs the same checks locally.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: validate-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  skills:
+    name: Skills and references
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # the version-bump check compares against the base branch
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install pyyaml==6.0.2
+      - name: Check skills, references, manifests, READMEs and the diagram palette
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            python3 tools/validate_skills.py --base "origin/${{ github.base_ref }}"
+          else
+            python3 tools/validate_skills.py
+          fi
+
+  manifests:
+    name: Plugin manifests (claude plugin validate)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: npm install --global @anthropic-ai/claude-code@2.1.307
+      - name: Validate the marketplace and each plugin, warnings as errors
+        run: |
+          claude plugin validate . --strict
+          for plugin in plugins/*/; do
+            claude plugin validate "$plugin" --strict
+          done
+
+  diagrams:
+    name: Mermaid diagrams render
+    runs-on: ubuntu-latest
+    env:
+      PUPPETEER_SKIP_DOWNLOAD: "true"
+      PUPPETEER_EXECUTABLE_PATH: /usr/bin/google-chrome
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: python3 tools/check_mermaid.py
+
+  scripts:
+    name: Bundled script tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run every skill's scripts/tests
+        run: |
+          status=0
+          for tests in $(find plugins -type d -path '*/scripts/tests' | sort); do
+            skill="${tests%/scripts/tests}"
+            echo "::group::$skill"
+            (cd "$skill" && python3 -m unittest discover -s scripts/tests -v) || status=1
+            echo "::endgroup::"
+          done
+          exit $status

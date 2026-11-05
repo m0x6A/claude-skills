@@ -12,6 +12,12 @@ Build and judge web UI against an explicit craft bar, in a real browser.
   width and reports friction by severity.
 - **ux-critic** agent: runs all of the above and returns `ships | ships after should-fixes | not done`.
 
+## Install
+
+```
+/plugin install web-ux --marketplace m0x6A/claude-skills
+```
+
 ## Setup
 
 On first use, create `.claude/profiles/ux.md` from
