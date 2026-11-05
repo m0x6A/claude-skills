@@ -39,7 +39,8 @@ Read `.claude/profiles/feature-workflow.md`. If it is missing, create it with th
 - where the list of deployable parts comes from (a deps manifest, the solution, workspaces);
 - the specs directory, the ADR directory, template and index;
 - the system base diagram (`system-base.mmd`). Create it on first use: one node per
-  deployable, store and broker, grouped by bounded context, `classDef affected/new/quiet`;
+  deployable, store and broker, grouped by bounded context in subgraphs, drawn by `references/diagrams.md` (shapes,
+  edges and the class block), everything `:::quiet`;
 - which **caveat packs** in `references/caveats.md` apply (core always; messaging, gateway,
   web-frontend, data, AI as the stack has them) and any project-specific caveat rows;
 - enforcement, if any (hooks or CI that check `status:` and `review:` frontmatter).
@@ -87,9 +88,11 @@ Write `<features>/<N>-<slug>/design.md` from `templates/design.md`. Rules per se
     telemetry conventions (correlation id, span names, metric naming) over new ones. "We'll add
     logging" is not an answer.
 - **Where it fits**: copy the project's `system-base.mmd`; mark changed nodes `:::affected`,
-  new ones `:::new`, leave the rest `:::quiet`, add new edges. Change nothing else, so two
+  new ones `:::new`, leave the rest `:::quiet`, add new links as `==>`. Change nothing else, so two
   designs stay comparable.
-- **Diagram rules**: labels on one line (`·` separates parts; many renderers drop `<br/>`).
+- **Diagram rules**: every diagram follows `references/diagrams.md`: one question per sheet,
+  about twelve nodes at most, colour only for changed, new and failure, one shape and edge per kind
+  of thing, labels on one line naming the real route, message or table, and the shared class block.
   The system map is `flowchart LR`; a pipeline of more than eight steps is `flowchart TB`.
 - **Main flow**: one `sequenceDiagram` per user-visible flow, naming the route, request and
   response types, the messages, the handlers, the timeouts and the status codes.
@@ -128,10 +131,22 @@ Then:
    `Accepted: <finding> — <reason>`. A pattern chosen deliberately stays listed with its
    reason. Re-run the reviewer until it reports no blockers, then set `review.stage1` to
    `passed` or `accepted-risks` with the date.
-2. **Render.** Copy `references/render.html`, replace `<!--TITLE-->`, `<!--META-->`
-   (`#<N> · <date> · <model name>`) and `<!--DIAGRAMS-->` with one
-   `<section><h2>…</h2><div class="scroll"><pre class="mermaid">…</pre></div></section>` per
-   Mermaid block (same source text). Publish it where the user can see rendered diagrams (an
+2. **Render.** Copy `references/render.html`. Replace `<!--TITLE-->` (both places) with the
+   feature title, `<!--ISSUE-->` with `#<N>`, `<!--DATE-->` and `<!--MODEL-->` with the model name,
+   and `<!--SHEETS-->` with one sheet per Mermaid block, the source copied unchanged:
+   ```html
+   <section class="sheet" data-sheet="3" data-title="Where it fits"
+            data-caption="Orders.Api and the orders db change; Billing gains a refund consumer.">
+   <script type="text/x-mermaid">
+   flowchart LR
+   …
+   </script>
+   </section>
+   ```
+   `data-sheet` is the design section number; `data-caption` is one sentence saying what changed
+   on this sheet, which is what the approver reads first. Two sheets from one section number get
+   `3a`, `3b`. The page builds the title blocks, contents and key, and re-colours the class block for
+   dark mode; a sheet that fails to parse shows the error and its source, so fix it before publishing. Publish it where the user can see rendered diagrams (an
    Artifact in Claude Code; otherwise link the Markdown on the branch, since GitHub renders Mermaid).
 3. **Gate.** Present the design in one short message, in this order: the **spec** (does / we'll
    know it works when / must not break / debug at 3 am, one line per item), the risk map, the

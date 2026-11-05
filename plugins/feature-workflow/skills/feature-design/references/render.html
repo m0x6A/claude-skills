@@ -1,59 +1,297 @@
-<title><!--TITLE--></title>
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="claude:viewport-fit-sides" content="cover">
+<title><!--TITLE--></title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Mono:wght@400;500&family=Atkinson+Hyperlegible+Next:wght@400;600;700&display=swap">
 <style>
-  /* Layout: one column of diagram panels, each in its own scroll container; the page is read, not operated. */
+  /* A drawing set: each diagram is a numbered sheet with a title block. Colour is reserved for
+     what the feature changes (cobalt), adds (viridian) and how it fails (carmine). */
   :root {
-    --bg: #fbfaf7; --fg: #1f2a37; --muted: #5b6774; --panel: #ffffff; --line: #e3e1da;
-    --affected: #2563eb; --new: #059669; --quiet: #cbd5e1;
-    --font-body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
-    --font-mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+    --paper: #F6F7F9; --sheet: #FFFFFF; --ink: #1B2330; --graphite: #5A6472; --rule: #D9DEE5;
+    --grid: rgba(27, 35, 48, 0.07);
+    --affected: #2F5BD3; --affected-tint: #E7EDFB;
+    --new: #0F8A6A; --new-tint: #DFF2EA;
+    --err: #C2334D; --err-tint: #FBE8EC;
+    --quiet: #A7B0BC;
+    --font: "Atkinson Hyperlegible Next", "Atkinson Hyperlegible", system-ui, sans-serif;
+    --mono: "Atkinson Hyperlegible Mono", ui-monospace, "SF Mono", Menlo, monospace;
+    color-scheme: light;
   }
   @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) { --bg: #0f1419; --fg: #e6e9ee; --muted: #9aa5b1; --panel: #161c24; --line: #273140; --quiet: #3b4656; color-scheme: dark; }
+    :root:not([data-theme="light"]) {
+      --paper: #11151B; --sheet: #171C24; --ink: #E4E8EE; --graphite: #9AA4B2; --rule: #2A323E;
+      --grid: rgba(228, 232, 238, 0.06);
+      --affected: #7C9EFF; --affected-tint: #1A2747; --new: #46C99C; --new-tint: #0F3329;
+      --err: #FF7A90; --err-tint: #3A1820; --quiet: #4E5868; color-scheme: dark;
+    }
   }
-  :root[data-theme="dark"] { --bg: #0f1419; --fg: #e6e9ee; --muted: #9aa5b1; --panel: #161c24; --line: #273140; --quiet: #3b4656; color-scheme: dark; }
-  body { margin: 0; background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 15px; line-height: 1.5;
-         padding-block: 24px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
-  main { max-width: 1100px; margin: 0 auto; display: grid; gap: 20px; }
-  header h1 { font-size: 1.45rem; margin: 0 0 4px; text-wrap: balance; letter-spacing: -0.01em; }
-  header p { margin: 0; color: var(--muted); }
-  header .meta { font-family: var(--font-mono); font-size: 0.8rem; margin-top: 8px; }
-  .legend { display: flex; gap: 18px; flex-wrap: wrap; color: var(--muted); font-size: 0.85rem; }
-  .legend span::before { content: ""; display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 6px; vertical-align: -2px; }
-  .legend .a::before { background: var(--affected); } .legend .n::before { background: var(--new); } .legend .q::before { background: var(--quiet); }
-  section { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px; min-width: 0; }
-  section h2 { font-size: 0.95rem; margin: 0 0 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+  :root[data-theme="dark"] {
+    --paper: #11151B; --sheet: #171C24; --ink: #E4E8EE; --graphite: #9AA4B2; --rule: #2A323E;
+    --grid: rgba(228, 232, 238, 0.06);
+    --affected: #7C9EFF; --affected-tint: #1A2747; --new: #46C99C; --new-tint: #0F3329;
+    --err: #FF7A90; --err-tint: #3A1820; --quiet: #4E5868; color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--paper); color: var(--ink);
+    font: 400 16px/1.55 var(--font); font-variant-numeric: tabular-nums;
+    padding: 40px max(16px, env(safe-area-inset-right, 0px)) 64px max(16px, env(safe-area-inset-left, 0px));
+  }
+  main { max-width: 1180px; margin: 0 auto; }
+  code, .mono { font-family: var(--mono); font-size: 0.9em; }
+
+  /* Cover: the feature, then who drew it and when. */
+  .cover { display: grid; gap: 18px; padding-bottom: 28px; border-bottom: 2px solid var(--ink); }
+  .cover h1 { margin: 0; font-size: clamp(1.75rem, 1.2rem + 2.2vw, 2.75rem); line-height: 1.12; font-weight: 700; letter-spacing: -0.015em; max-width: 26ch; text-wrap: balance; }
+  .facts { display: flex; flex-wrap: wrap; gap: 8px 32px; margin: 0; }
+  .facts div { display: grid; gap: 2px; }
+  .facts dt { color: var(--graphite); font-size: 0.82rem; }
+  .facts dd { margin: 0; font-weight: 600; }
+  .source { margin: 0; color: var(--graphite); font-size: 0.92rem; max-width: 68ch; }
+
+  /* Contents and key share one bar that stays in reach while scrolling. */
+  .bar {
+    position: relative; z-index: 2; margin: 0 -16px 28px; padding: 12px 16px;
+    background: color-mix(in srgb, var(--paper) 92%, transparent); backdrop-filter: blur(6px);
+    border-bottom: 1px solid var(--rule);
+    display: flex; flex-wrap: wrap; align-items: center; gap: 10px 28px;
+  }
+  .contents { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; }
+  .contents a {
+    display: inline-flex; align-items: baseline; gap: 6px; padding: 4px 10px; border-radius: 6px;
+    color: var(--ink); text-decoration: none; font-size: 0.9rem; border: 1px solid var(--rule); background: var(--sheet);
+  }
+  .contents a b { font-weight: 700; color: var(--graphite); }
+  .contents a:hover { border-color: var(--graphite); }
+  .key { display: flex; flex-wrap: wrap; gap: 6px 18px; margin: 0; padding: 0; list-style: none; color: var(--graphite); font-size: 0.86rem; }
+  .key li { display: inline-flex; align-items: center; gap: 7px; }
+  .key svg { flex: none; overflow: visible; }
+  .bar button {
+    margin-left: auto; font: 600 0.88rem var(--font); color: var(--ink); background: var(--sheet);
+    border: 1px solid var(--rule); border-radius: 6px; padding: 6px 12px; cursor: pointer;
+  }
+  .bar button:hover { border-color: var(--graphite); }
+  :focus-visible { outline: 2px solid var(--affected); outline-offset: 2px; }
+
+  /* A sheet: title block, then the drawing on a faint drafting grid. */
+  .sheets { display: grid; gap: 28px; }
+  .sheet { background: var(--sheet); border: 1px solid var(--rule); border-radius: 4px; min-width: 0; scroll-margin-top: 84px; }
+  .titleblock { display: grid; grid-template-columns: auto 1fr auto; border-bottom: 1px solid var(--rule); }
+  .titleblock .no {
+    display: grid; place-items: center; min-width: 76px; padding: 12px 16px;
+    font-size: 2rem; font-weight: 700; line-height: 1; border-right: 1px solid var(--rule);
+  }
+  .titleblock .what { padding: 14px 18px; min-width: 0; }
+  .titleblock h2 { margin: 0; font-size: 1.15rem; line-height: 1.3; font-weight: 700; }
+  .titleblock p { margin: 3px 0 0; color: var(--graphite); font-size: 0.95rem; max-width: 72ch; }
+  .titleblock .ref { padding: 14px 18px; border-left: 1px solid var(--rule); color: var(--graphite); font-size: 0.85rem; white-space: nowrap; align-self: stretch; display: flex; align-items: center; }
+  .canvas {
+    background-image: radial-gradient(var(--grid) 1px, transparent 1.2px); background-size: 18px 18px;
+    padding: 28px 20px; border-radius: 0 0 4px 4px;
+  }
   .scroll { overflow-x: auto; }
-  pre.mermaid { margin: 0; background: transparent; }
-  /* Mermaid sets an inline max-width on its svg so it shrinks to the panel; a long pipeline then becomes unreadable.
-     Default is natural size (1:1) with horizontal scroll inside the panel; the toggle fits it to the panel width. */
-  pre.mermaid svg { max-width: none !important; height: auto; }
-  main.fit pre.mermaid svg { max-width: 100% !important; }
-  .toolbar { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
-  .toolbar button { font: inherit; font-size: 0.85rem; padding: 6px 12px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel); color: var(--fg); cursor: pointer; }
-  .toolbar button:focus-visible { outline: 2px solid var(--affected); outline-offset: 2px; }
-  .toolbar button[aria-pressed="true"] { border-color: var(--affected); }
+  .scroll.more { mask-image: linear-gradient(to right, #000 calc(100% - 56px), transparent); }
+  .diagram { display: flex; justify-content: center; min-width: min-content; }
+  /* Natural size by default (a long pipeline stays readable and scrolls); "Fit to width" shrinks it. */
+  .diagram svg { max-width: none !important; height: auto; flex: none; }
+  /* Edge grammar the source cannot colour by itself: new edges (==>) in viridian. */
+  .diagram svg path.edge-thickness-thick { stroke: var(--new) !important; }
+  .failed { margin: 0; padding: 16px; border-left: 3px solid var(--err); background: var(--err-tint); color: var(--ink); }
+  .failed pre { white-space: pre-wrap; font: 0.85rem/1.5 var(--mono); margin: 10px 0 0; color: var(--graphite); }
+
+  /* The bar stays in reach on wide screens; on a phone it would cover a third of the view. */
+  @media (min-width: 760px) { .bar { position: sticky; top: 0; } }
+  @media (max-width: 640px) {
+    .titleblock { grid-template-columns: auto 1fr; }
+    .titleblock .ref { display: none; }
+    .titleblock .no { min-width: 56px; font-size: 1.5rem; }
+    .bar button { margin-left: 0; }
+    .canvas { padding: 20px 12px; }
+  }
 </style>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;600&family=IBM+Plex+Mono&display=swap">
+</head>
+<body>
 <main>
-  <header>
+  <header class="cover">
     <h1><!--TITLE--></h1>
-    <p>System design diagrams, rendered from the Mermaid source in design.md.</p>
-    <p class="meta"><!--META--></p>
+    <dl class="facts">
+      <div><dt>Issue</dt><dd><!--ISSUE--></dd></div>
+      <div><dt>Date</dt><dd><!--DATE--></dd></div>
+      <div><dt>Drawn by</dt><dd><!--MODEL--></dd></div>
+    </dl>
+    <p class="source">Rendered from the Mermaid source in design.md. The Markdown is the source of truth; this page only draws it.</p>
   </header>
-  <div class="toolbar">
-    <div class="legend"><span class="a">affected by this feature</span><span class="n">new</span><span class="q">untouched</span></div>
+
+  <div class="bar">
+    <ol class="contents" aria-label="Sheets"></ol>
+    <ul class="key" aria-label="Key">
+      <li><svg width="22" height="14" aria-hidden="true"><rect x="1" y="1" width="20" height="12" rx="3" fill="var(--affected-tint)" stroke="var(--affected)" stroke-width="2"/></svg>changed</li>
+      <li><svg width="22" height="14" aria-hidden="true"><rect x="1" y="1" width="20" height="12" rx="3" fill="var(--new-tint)" stroke="var(--new)" stroke-width="2"/></svg>new</li>
+      <li><svg width="22" height="14" aria-hidden="true"><rect x="1" y="1" width="20" height="12" rx="3" fill="var(--sheet)" stroke="var(--quiet)"/></svg>untouched</li>
+      <li><svg width="22" height="14" aria-hidden="true"><rect x="1" y="1" width="20" height="12" rx="6" fill="var(--err-tint)" stroke="var(--err)" stroke-width="1.5"/></svg>failure outcome</li>
+      <li><svg width="28" height="10" aria-hidden="true"><line x1="1" y1="5" x2="27" y2="5" stroke="var(--graphite)" stroke-width="1.5"/></svg>call</li>
+      <li><svg width="28" height="10" aria-hidden="true"><line x1="1" y1="5" x2="27" y2="5" stroke="var(--graphite)" stroke-width="1.5" stroke-dasharray="3 3"/></svg>message</li>
+      <li><svg width="28" height="10" aria-hidden="true"><line x1="1" y1="5" x2="27" y2="5" stroke="var(--new)" stroke-width="3.5"/></svg>new link</li>
+    </ul>
     <button id="fit" type="button" aria-pressed="false">Fit to width</button>
   </div>
-  <!--DIAGRAMS-->
+
+  <div class="sheets">
+<!--SHEETS-->
+  </div>
 </main>
-<script>
-  (function () {
-    var main = document.querySelector('main'), btn = document.getElementById('fit');
-    btn.addEventListener('click', function () {
-      var on = main.classList.toggle('fit');
-      btn.setAttribute('aria-pressed', on ? 'true' : 'false');
-      btn.textContent = on ? 'Actual size' : 'Fit to width';
+
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.esm.min.mjs';
+
+  // The source's classDef lines carry light values (so GitHub renders them too); here they are
+  // swapped for the palette of the current colour scheme. Names follow references/diagrams.md.
+  const palettes = {
+    light: {
+      cls: {
+        affected: 'fill:#E7EDFB,stroke:#2F5BD3,stroke-width:2px,color:#13244F',
+        new: 'fill:#DFF2EA,stroke:#0F8A6A,stroke-width:2px,color:#0A3A2C',
+        quiet: 'fill:#FFFFFF,stroke:#A7B0BC,stroke-width:1px,color:#3F4855',
+        ext: 'fill:#F2F4F7,stroke:#A7B0BC,stroke-width:1px,stroke-dasharray:4 3,color:#3F4855',
+        ok: 'fill:#FFFFFF,stroke:#1B2330,stroke-width:1.5px,color:#1B2330',
+        err: 'fill:#FBE8EC,stroke:#C2334D,stroke-width:1.5px,color:#5A1424',
+      },
+      vars: {
+        background: '#FFFFFF', primaryColor: '#FFFFFF', primaryBorderColor: '#A7B0BC', primaryTextColor: '#1B2330',
+        secondaryColor: '#F2F4F7', tertiaryColor: '#F6F8FB', lineColor: '#6B7480', textColor: '#1B2330',
+        clusterBkg: '#F6F8FB', clusterBorder: '#D3D9E1', titleColor: '#3F4855', edgeLabelBackground: '#FFFFFF',
+        actorBkg: '#FFFFFF', actorBorder: '#A7B0BC', actorTextColor: '#1B2330', actorLineColor: '#C9D0D9',
+        signalColor: '#3F4855', signalTextColor: '#1B2330', sequenceNumberColor: '#FFFFFF',
+        labelBoxBkgColor: '#F2F4F7', labelBoxBorderColor: '#C9D0D9', labelTextColor: '#1B2330', loopTextColor: '#3F4855',
+        noteBkgColor: '#FDF6E3', noteBorderColor: '#E0C47A', noteTextColor: '#4A3B12',
+        activationBkgColor: '#E7EDFB', activationBorderColor: '#2F5BD3',
+        attributeBackgroundColorOdd: '#FFFFFF', attributeBackgroundColorEven: '#F6F8FB',
+      },
+    },
+    dark: {
+      cls: {
+        affected: 'fill:#1A2747,stroke:#7C9EFF,stroke-width:2px,color:#DCE6FF',
+        new: 'fill:#0F3329,stroke:#46C99C,stroke-width:2px,color:#D2F5E8',
+        quiet: 'fill:#171C24,stroke:#4E5868,stroke-width:1px,color:#C9D0DA',
+        ext: 'fill:#1D232C,stroke:#4E5868,stroke-width:1px,stroke-dasharray:4 3,color:#C9D0DA',
+        ok: 'fill:#171C24,stroke:#E4E8EE,stroke-width:1.5px,color:#E4E8EE',
+        err: 'fill:#3A1820,stroke:#FF7A90,stroke-width:1.5px,color:#FFD9E0',
+      },
+      vars: {
+        darkMode: true,
+        background: '#171C24', primaryColor: '#171C24', primaryBorderColor: '#4E5868', primaryTextColor: '#E4E8EE',
+        secondaryColor: '#1D232C', tertiaryColor: '#1B2129', lineColor: '#8A94A3', textColor: '#E4E8EE',
+        clusterBkg: '#1B2129', clusterBorder: '#2F3845', titleColor: '#C9D0DA', edgeLabelBackground: '#171C24',
+        actorBkg: '#1D232C', actorBorder: '#4E5868', actorTextColor: '#E4E8EE', actorLineColor: '#39424F',
+        signalColor: '#B4BDC9', signalTextColor: '#E4E8EE', sequenceNumberColor: '#11151B',
+        labelBoxBkgColor: '#1D232C', labelBoxBorderColor: '#39424F', labelTextColor: '#E4E8EE', loopTextColor: '#C9D0DA',
+        noteBkgColor: '#2E2A1C', noteBorderColor: '#7A6A3A', noteTextColor: '#F1E6C4',
+        activationBkgColor: '#1A2747', activationBorderColor: '#7C9EFF',
+        attributeBackgroundColorOdd: '#171C24', attributeBackgroundColorEven: '#1B2129',
+      },
+    },
+  };
+
+  const root = document.documentElement;
+  const media = matchMedia('(prefers-color-scheme: dark)');
+  const scheme = () => root.dataset.theme || (media.matches ? 'dark' : 'light');
+  const classLine = /^(\s*)classDef\s+(affected|new|quiet|ext|ok|err)\b.*$/gm;
+
+  // Build each sheet's title block and the contents bar from its data attributes.
+  const sheets = [...document.querySelectorAll('section.sheet')];
+  const contents = document.querySelector('.contents');
+  sheets.forEach((s, i) => {
+    const no = s.dataset.sheet || String(i + 1), title = s.dataset.title || 'Diagram';
+    s.id = s.id || 'sheet-' + no;
+    const source = s.querySelector('script[type="text/x-mermaid"]');
+    s.dataset.source = source ? source.textContent.trim() : '';
+    s.innerHTML = '';
+    const block = document.createElement('header'); block.className = 'titleblock';
+    const n = document.createElement('div'); n.className = 'no'; n.textContent = no;
+    const what = document.createElement('div'); what.className = 'what';
+    const h = document.createElement('h2'); h.textContent = title; what.append(h);
+    if (s.dataset.caption) { const p = document.createElement('p'); p.textContent = s.dataset.caption; what.append(p); }
+    const ref = document.createElement('div'); ref.className = 'ref'; ref.textContent = 'design.md §' + no;
+    block.append(n, what, ref);
+    const canvas = document.createElement('div'); canvas.className = 'canvas';
+    canvas.innerHTML = '<div class="scroll"><div class="diagram"></div></div>';
+    s.append(block, canvas);
+    const li = document.createElement('li'), a = document.createElement('a');
+    a.href = '#' + s.id; a.innerHTML = '<b></b><span></span>';
+    a.querySelector('b').textContent = no; a.querySelector('span').textContent = title;
+    li.append(a); contents.append(li);
+  });
+
+  let pass = 0;
+  async function draw() {
+    const p = palettes[scheme()], run = ++pass;
+    mermaid.initialize({
+      startOnLoad: false, securityLevel: 'strict', theme: 'base',
+      fontFamily: getComputedStyle(root).getPropertyValue('--font'),
+      themeVariables: { ...p.vars, fontFamily: getComputedStyle(root).getPropertyValue('--font'), fontSize: '15px' },
+      flowchart: { curve: 'basis', nodeSpacing: 46, rankSpacing: 62, padding: 14, htmlLabels: true },
+      sequence: { mirrorActors: false, actorMargin: 64, boxMargin: 14, noteMargin: 12, messageMargin: 42, boxTextMargin: 6 },
+      er: { layoutDirection: 'LR', minEntityWidth: 120 },
     });
-  })();
+    for (const [i, s] of sheets.entries()) {
+      const target = s.querySelector('.diagram');
+      const src = s.dataset.source.replace(classLine, (m, indent, name) => `${indent}classDef ${name} ${p.cls[name]}`);
+      try {
+        const { svg } = await mermaid.render(`m${run}-${i}`, src);
+        if (run !== pass) return;
+        target.innerHTML = svg;
+        const el = target.querySelector('svg');
+        if (el) {
+          // Mermaid sizes the svg to 100% of its box, so a wide map shrinks and a tall flow balloons.
+          // Draw every sheet at its natural size instead, so text is the same size on every sheet.
+          el.removeAttribute('width');
+          el.setAttribute('role', 'img');
+          el.setAttribute('aria-label', s.dataset.title || 'Diagram');
+        }
+      } catch (e) {
+        target.innerHTML = '';
+        const box = document.createElement('div'); box.className = 'failed';
+        box.textContent = 'This sheet did not render. Fix its Mermaid in design.md: ' + (e?.message || e);
+        const pre = document.createElement('pre'); pre.textContent = s.dataset.source; box.append(pre);
+        target.append(box);
+      }
+    }
+    size();
+  }
+
+  // Size each drawing: natural size when it fits; shrink a wide one to the sheet, but not below
+  // MIN_SCALE (text stays readable); past that it scrolls, and the edge fades to say so.
+  // "Fit to width" drops the floor so the whole drawing is visible at once.
+  const MIN_SCALE = 0.7;
+  const fit = document.getElementById('fit'), main = document.querySelector('main');
+  function size() {
+    const all = main.classList.contains('fit');
+    for (const s of sheets) {
+      const el = s.querySelector('.diagram svg'), scroll = s.querySelector('.scroll');
+      const vb = el && el.viewBox && el.viewBox.baseVal;
+      if (!vb || !vb.width) continue;
+      const room = scroll.clientWidth, scale = Math.min(1, room / vb.width);
+      el.style.width = vb.width * (all ? scale : Math.max(scale, MIN_SCALE)) + 'px';
+      scroll.classList.toggle('more', scroll.scrollWidth > room + 1 && scroll.scrollLeft + room < scroll.scrollWidth - 1);
+    }
+  }
+  sheets.forEach(s => s.querySelector('.scroll').addEventListener('scroll', size, { passive: true }));
+  addEventListener('resize', size);
+  fit.addEventListener('click', () => {
+    const on = main.classList.toggle('fit');
+    fit.setAttribute('aria-pressed', String(on));
+    fit.textContent = on ? 'Readable size' : 'Fit to width';
+    size();
+  });
+  media.addEventListener('change', draw);
+  new MutationObserver(draw).observe(root, { attributes: true, attributeFilter: ['data-theme'] });
+  document.fonts.ready.then(draw);
 </script>
+</body>
+</html>
