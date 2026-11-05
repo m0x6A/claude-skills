@@ -41,7 +41,8 @@ columns as a full design, so a promotion copies them unchanged. Rules per sectio
     telemetry already covers it: then name the existing signal and say you checked it fires on this
     path. A missing signal becomes a task. Usually one or two rows.
 - **§3 Where it changes**: one line per project and file. No diagrams by default; add one Mermaid
-  `sequenceDiagram` only if the flow is not obvious from the list (labels on one line, `·` between parts).
+  `sequenceDiagram` only if the flow is not obvious from the list, drawn by
+  `../feature-design/references/diagrams.md`.
 - **§4 Caveats triage**: the *Core* rows of `../feature-design/references/caveats.md` plus the rows of
   each pack the profile enables, plus the profile's own rows. Open the thing in "Look at" before
   answering. Write a line for each row that applies; collect the rest on one line,

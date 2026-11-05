@@ -75,17 +75,30 @@ Issue: #<issue> · Plan: [plan.md](plan.md)
 ## 3. Where it fits
 
 <!-- Copy the project's system-base.mmd; `:::affected` on every node this feature changes,
-     `:::new` for what it introduces, the rest `:::quiet`. Labels on one line. -->
+     `:::new` for what it introduces, the rest `:::quiet`; new links `==>`. Shapes, edges and the
+     class block: references/diagrams.md. The examples below show the style; replace them. -->
 
 ```mermaid
 flowchart LR
-    classDef affected fill:#2563eb,stroke:#1e40af,color:#fff
-    classDef new fill:#059669,stroke:#047857,color:#fff
-    classDef quiet fill:#f3f4f6,stroke:#9ca3af,color:#374151
+    classDef affected fill:#E7EDFB,stroke:#2F5BD3,stroke-width:2px,color:#13244F
+    classDef new fill:#DFF2EA,stroke:#0F8A6A,stroke-width:2px,color:#0A3A2C
+    classDef quiet fill:#FFFFFF,stroke:#A7B0BC,stroke-width:1px,color:#3F4855
+    classDef ext fill:#F2F4F7,stroke:#A7B0BC,stroke-width:1px,stroke-dasharray:4 3,color:#3F4855
+    classDef ok fill:#FFFFFF,stroke:#1B2330,stroke-width:1.5px,color:#1B2330
+    classDef err fill:#FBE8EC,stroke:#C2334D,stroke-width:1.5px,color:#5A1424
 
-    Browser[Browser]:::quiet --> Web[web app]:::quiet --> Gateway[gateway]:::quiet
-    Gateway --> Bus{{message broker}}:::quiet
-    Bus --> Svc[service]:::quiet --> Db[(service db)]:::quiet
+    User([customer]):::quiet --> Web[web app]:::affected
+    Web -- POST /orders/{id}/cancel --> Gw[gateway]:::affected
+    subgraph orders [Orders]
+        Api[Orders.Api]:::affected --> OrdersDb[(orders db)]:::affected
+    end
+    subgraph billing [Billing]
+        Refunds[RefundConsumer]:::new --> BillingDb[(billing db)]:::quiet
+    end
+    Gw -- CancelOrder --> Api
+    Api == OrderCancelled ==> Bus{{rabbitmq}}:::quiet
+    Bus == OrderCancelled ==> Refunds
+    Refunds -- refund --> Psp[payment provider]:::ext
 ```
 
 ## 4. Main flow
@@ -94,15 +107,30 @@ flowchart LR
 
 ```mermaid
 sequenceDiagram
-    participant W as Web app
-    participant G as Gateway
-    participant H as Handler
-    participant D as Database
-    W->>G: PUT /resource (RequestDto)
-    G->>H: Command (timeout 10 s)
-    H->>D: write
-    H-->>G: Result
-    G-->>W: 200 Dto | 400 | 404 | 504
+    autonumber
+    actor U as Customer
+    box rgba(47,91,211,0.07) Orders
+        participant G as Gateway
+        participant H as CancelOrderHandler
+        participant D as orders db
+    end
+    box rgba(120,130,145,0.07) Billing
+        participant R as RefundConsumer
+    end
+    U->>G: POST /orders/{id}/cancel
+    G->>H: CancelOrder · timeout 10 s
+    H->>D: UPDATE status = cancelled WHERE status = placed
+    alt order was placed
+        rect rgba(15,138,106,0.10)
+            H-)R: OrderCancelled (via outbox)
+        end
+        H-->>G: Cancelled
+        G-->>U: 200 OrderDto
+    else already shipped
+        H-->>G: NotCancellable
+        G-->>U: 409 problem
+    end
+    Note right of R: dedupe on OrderId · retries 3× then error queue
 ```
 
 ## 5. Control flow
@@ -112,19 +140,25 @@ sequenceDiagram
 
 ```mermaid
 flowchart TD
-    classDef affected fill:#2563eb,stroke:#1e40af,color:#fff
-    classDef err fill:#dc2626,stroke:#991b1b,color:#fff
-    Start([request arrives]) --> Auth{caller allowed?}
-    Auth -- no --> E403[403 problem]:::err
+    classDef affected fill:#E7EDFB,stroke:#2F5BD3,stroke-width:2px,color:#13244F
+    classDef new fill:#DFF2EA,stroke:#0F8A6A,stroke-width:2px,color:#0A3A2C
+    classDef quiet fill:#FFFFFF,stroke:#A7B0BC,stroke-width:1px,color:#3F4855
+    classDef ext fill:#F2F4F7,stroke:#A7B0BC,stroke-width:1px,stroke-dasharray:4 3,color:#3F4855
+    classDef ok fill:#FFFFFF,stroke:#1B2330,stroke-width:1.5px,color:#1B2330
+    classDef err fill:#FBE8EC,stroke:#C2334D,stroke-width:1.5px,color:#5A1424
+
+    Start([request arrives]):::quiet --> Auth{caller owns order?}
+    Auth -- no --> E403([403 problem]):::err
     Auth -- yes --> Valid{input valid?}
-    Valid -- no --> E400[400 problem with field errors]:::err
-    Valid -- yes --> Send[send command · timeout 10 s]:::affected
-    Send --> Resp{response in time?}
-    Resp -- timeout --> E504[504 problem]:::err
+    Valid -- no --> E400([400 · field errors]):::err
+    Valid -- yes --> Send[send CancelOrder · timeout 10 s]:::affected
+    Send --> Resp{answer in time?}
+    Resp -- timeout --> E504([504 problem · logged with correlation id]):::err
     Resp -- fault --> Map{fault type?}
-    Map -- not found --> E404[404 problem]:::err
-    Map -- other --> E500[500 problem · logged]:::err
-    Resp -- result --> Ok([200 dto])
+    Map -- not found --> E404([404 problem]):::err
+    Map -- already shipped --> E409([409 problem]):::err
+    Map -- other --> E500([500 problem · logged]):::err
+    Resp -- cancelled --> Ok([200 OrderDto]):::ok
 ```
 
 ## 6. Data flow
@@ -133,14 +167,21 @@ flowchart TD
 
 ```mermaid
 flowchart LR
-    classDef affected fill:#2563eb,stroke:#1e40af,color:#fff
-    classDef quiet fill:#f3f4f6,stroke:#9ca3af,color:#374151
-    User[user input]:::quiet -- RequestDto --> G[gateway]:::affected
-    G -- Command --> H[handler]:::affected
-    H -- row --> Db[(owning database)]:::affected
-    H -- Event --> Bus{{broker}}:::quiet
-    Bus -- Event --> Other[other context]:::quiet
-    H -- Result --> G -- Dto --> UI[web app state]:::quiet
+    classDef affected fill:#E7EDFB,stroke:#2F5BD3,stroke-width:2px,color:#13244F
+    classDef new fill:#DFF2EA,stroke:#0F8A6A,stroke-width:2px,color:#0A3A2C
+    classDef quiet fill:#FFFFFF,stroke:#A7B0BC,stroke-width:1px,color:#3F4855
+    classDef ext fill:#F2F4F7,stroke:#A7B0BC,stroke-width:1px,stroke-dasharray:4 3,color:#3F4855
+    classDef ok fill:#FFFFFF,stroke:#1B2330,stroke-width:1.5px,color:#1B2330
+    classDef err fill:#FBE8EC,stroke:#C2334D,stroke-width:1.5px,color:#5A1424
+
+    User([customer input]):::quiet -- CancelOrderRequest --> Gw[gateway]:::affected
+    subgraph orders [Orders]
+        Api[CancelOrderHandler]:::affected -- status · cancelled_utc --> OrdersDb[(orders db)]:::affected
+    end
+    Gw -- CancelOrder --> Api
+    Api == OrderCancelled · OrderId · Amount ==> Bus{{rabbitmq}}:::quiet
+    Bus == OrderCancelled ==> Refunds[RefundConsumer]:::new
+    Api -- Cancelled --> Gw -- OrderDto --> Ui[web app state]:::quiet
 ```
 
 ## 7. Data model and states
@@ -149,21 +190,29 @@ flowchart LR
 
 ```mermaid
 erDiagram
-    USER ||--o{ THING : owns
-    THING {
+    ORDERS ||--o{ REFUNDS : "refunded by"
+    ORDERS {
         uuid id PK
-        uuid user_id FK
-        varchar name "new"
-        timestamptz created_utc
+        varchar status "changed: adds cancelled"
+        timestamptz cancelled_utc "new"
+    }
+    REFUNDS {
+        uuid id PK
+        uuid order_id FK "new · owner Billing"
+        numeric amount "new"
+        varchar state "new"
     }
 ```
 
 ```mermaid
 stateDiagram-v2
-    [*] --> Draft
-    Draft --> Confirmed: confirm
-    Draft --> Discarded: discard · after 7 days
-    Confirmed --> [*]
+    classDef new fill:#DFF2EA,stroke:#0F8A6A,stroke-width:2px,color:#0A3A2C
+    [*] --> Placed
+    Placed --> Shipped: ShipOrder
+    Placed --> Cancelled: CancelOrder
+    Cancelled --> [*]
+    Shipped --> [*]
+    class Cancelled new
 ```
 
 ## 8. Affected parts
