@@ -1,6 +1,6 @@
 ---
 name: feature-design
-description: Use whenever someone asks for a full design, a system design, a design with sequence, data-flow or ER diagrams, or to escalate a small change to the full design, and whenever start-change routes work to the full track (migrations, contract changes, new consumers, jobs or services, boundary crossings, more than two deployables, new dependencies, auth changes, new multi-step flows). The full track of the feature workflow — no code without a written spec of what the change does, how we'll know it works and what it must not break — from an issue to an approved system design (the spec, where it fits, sequence, control, data-flow and data-model diagrams, affected parts, caveats, concurrency and idempotency, decisions) and then a separate approved implementation plan (ordered test-first tasks), each scrutinised by the design-reviewer agent and approved by a person before the next step.
+description: Use whenever someone asks for a full design, a system design, a design with sequence, data-flow or ER diagrams, or to escalate a small change to the full design, and whenever start-change routes work to the full track (migrations, contract changes, new consumers, jobs or services, boundary crossings, more than two deployables, new dependencies, auth changes, new multi-step flows). The full track of the feature workflow — no code without a written spec of what the change does, how we'll know it works, what it must not break and what on-call would need to debug it at 3 am — from an issue to an approved system design (the spec, where it fits, sequence, control, data-flow and data-model diagrams, affected parts, caveats, concurrency and idempotency, decisions) and then a separate approved implementation plan (ordered test-first tasks), each scrutinised by the design-reviewer agent and approved by a person before the next step.
 ---
 
 # Feature design: issue → system design → implementation plan
@@ -10,14 +10,19 @@ sit in the system, what does it touch, what could go wrong, what do we decide. T
 **implementation plan** answers: which code, in which order, with which tests. Never write the
 plan before the design is approved, and never write code before the plan is approved.
 
-**No code without a written spec.** Every design opens with a spec (§2) that answers three
-questions, and every plan proves all three:
+**No code without a written spec.** Every design opens with a spec (§2) that answers four
+questions, and every plan proves all four:
 
 1. **What the change does**: observable behaviour, as numbered statements S1, S2, …
 2. **How we'll know it works**: for each statement and acceptance criterion, the evidence (a
    named test, a manual check with its expected result, or a production signal with its value).
 3. **What it must not break**: the neighbouring behaviour, contracts, data and guarantees,
    numbered N1, N2, …, each with the existing or new test or check that guards it.
+4. **How we'll debug it at 3 am**: *if I were on call at 3 am and this broke, what observability
+   would I need to solve it?* For each realistic failure mode, numbered O1, O2, …: how we find out
+   (alert or symptom), the signal that localises it (log line with its fields, metric, trace span)
+   and what it tells on-call to do first. Observability is designed here, before the code, not
+   added after the first incident.
 
 If you cannot answer one of them, the design is not ready to review. Ask the user rather than
 writing a vague answer.
@@ -72,6 +77,15 @@ Write `<features>/<N>-<slug>/design.md` from `templates/design.md`. Rules per se
     screens and flows next to the change, and the guarantees in the specs and ADRs. Each gets a guard:
     an existing test (cite it, and confirm it exercises the behaviour) or a new regression test
     or check. The caveats pass usually adds rows here, so revisit §2.3 after §9.
+  - *How we'll debug it at 3 am*: list the failure modes from the control flow and the caveats (a
+    dependency times out, a message is dead-lettered, a duplicate is dropped, a migration stalls, a
+    user is denied). For each, picture on-call with only the dashboards, logs and traces, no code and
+    no debugger: what tells them it is happening, what tells them where and for which record, and
+    what they do first. Every signal named here is something a task in the plan produces (and a test
+    asserts where it can: the log line is written, the metric increments); a new alert or dashboard
+    is a task too, as code if the project keeps them as code. Prefer the project's existing
+    telemetry conventions (correlation id, span names, metric naming) over new ones. "We'll add
+    logging" is not an answer.
 - **Where it fits**: copy the project's `system-base.mmd`; mark changed nodes `:::affected`,
   new ones `:::new`, leave the rest `:::quiet`, add new edges. Change nothing else, so two
   designs stay comparable.
@@ -120,7 +134,7 @@ Then:
    Mermaid block (same source text). Publish it where the user can see rendered diagrams (an
    Artifact in Claude Code; otherwise link the Markdown on the branch, since GitHub renders Mermaid).
 3. **Gate.** Present the design in one short message, in this order: the **spec** (does / we'll
-   know it works when / must not break, one line per item), the risk map, the
+   know it works when / must not break / debug at 3 am, one line per item), the risk map, the
    patterns and how each was handled, the diagrams link, affected parts, the concurrency and
    idempotency summary (including what is deferred), the caveats that are not n/a, the decisions,
    and the remaining findings. Ask for approval (approve / change X / stop). Do not start Stage 2
@@ -133,13 +147,13 @@ Write `plan.md` from `templates/plan.md`, only after Stage 1 is approved.
 - §0 restates the spec in one line per item, so the plan reads on its own.
 - Tasks grouped by project in dependency order (contracts → handlers → gateway → generated
   clients → UI → specs/ADRs/indexes). Each task gives **Test first** (test class and method,
-  and why it fails today), the files, the spec items it serves (S/N numbers), and the skill to
+  and why it fails today), the files, the spec items it serves (S/N/O numbers), and the skill to
   use if one exists. A task that serves no spec item is scope creep, so cut it or add the item
   to the design (and re-review).
 - A bookkeeping section always exists: spec edits, ADRs (or "none"), version bumps the stack
   requires, the index row, per-project history rows.
-- **Verification proves the spec**: every row of design §2.2 ("it works") and §2.3 ("nothing
-  it must not break is broken") appears in plan §5 with the task that produces its evidence,
+- **Verification proves the spec**: every row of design §2.2 ("it works"), §2.3 ("nothing
+  it must not break is broken") and §2.4 ("we could debug it at 3 am") appears in plan §5 with the task that produces its evidence,
   plus exact commands and the journeys to walk. The PR is ready when every row is ticked.
 
 Then:

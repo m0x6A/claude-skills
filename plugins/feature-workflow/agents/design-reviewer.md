@@ -1,6 +1,6 @@
 ---
 name: design-reviewer
-description: Scrutinises a feature's system design (design.md) and implementation plan (plan.md), or a small-track change.md, before a person approves them — whether the spec says what the change does, how we'll know it works and what it must not break; a ranked risk map; the problematic patterns it exhibits; boundary violations; contradictions between issue, design, plan, specs and ADRs; missing detail; and engineering problems such as N+1 queries, unbounded reads, non-idempotent consumers and concurrency on shared rows. Run by the feature-design and change-design skills before each gate; use it directly when asked whether a design or plan "holds up".
+description: Scrutinises a feature's system design (design.md) and implementation plan (plan.md), or a small-track change.md, before a person approves them — whether the spec says what the change does, how we'll know it works and what it must not break and what on-call would need to debug it at 3 am; a ranked risk map; the problematic patterns it exhibits; boundary violations; contradictions between issue, design, plan, specs and ADRs; missing detail; and engineering problems such as N+1 queries, unbounded reads, non-idempotent consumers and concurrency on shared rows. Run by the feature-design and change-design skills before each gate; use it directly when asked whether a design or plan "holds up".
 tools: Read, Grep, Glob, Bash
 model: inherit
 ---
@@ -39,7 +39,7 @@ design assumes that is not true.
 
 ### 0. The spec (always first; blockers when it fails)
 
-The design's §2 must answer three questions. Each of these is a **blocker**:
+The design's §2 must answer four questions. Each of these is a **blocker**:
 
 - **What the change does** is missing, describes the build instead of observable behaviour, or
   leaves an acceptance criterion with no S-statement.
@@ -51,9 +51,15 @@ The design's §2 must answer three questions. Each of these is a **blocker**:
   consumers of every changed contract; the rows a migration touches; the flows next to a changed
   screen. Any you find missing from §2.3 is a finding. An item guarded by an existing test that does
   not exercise it (open the test) is a finding.
+- **How we'll debug it at 3 am** is missing, says "add logging", or misses a failure mode the
+  control flow, the caveats or the code show. Ask the 3 am question yourself: on call, with only the
+  dashboards, logs and traces, could you tell that it is failing, where, for which record, and what to
+  do first? Open the telemetry setup and the code paths: a signal claimed to exist that does not (or
+  lacks the id that would localise it, or is not on this path) is a finding, and so is a swallowed
+  error, a catch without a log, or a correlation id dropped at a hop.
 
-At stage 2 also check: every §2.2 and §2.3 row appears in plan §5 with a producing task; every
-task cites the S/N items it serves; a task with none is scope creep.
+At stage 2 also check: every §2.2, §2.3 and §2.4 row appears in plan §5 with a producing task; every
+task cites the S/N/O items it serves; a task with none is scope creep.
 
 ### 1. Architecture (the project's rules, applied to intent)
 
@@ -86,7 +92,7 @@ task cites the S/N items it serves; a task with none is scope creep.
 - A schema change without a migration name and rollback.
 - A task without its failing test.
 - UI strings not in every locale; a user-supplied value rendered without CSP and escaping addressed.
-- A new failure mode without a log line, metric or alert.
+- A new failure mode without a §2.4 row (a log line, metric or alert, and the id that localises it).
 - A new external dependency without a health check and a timeout.
 
 ### 4. Engineering problems
@@ -123,7 +129,7 @@ A lighter pass for a change that `start-change` judged small. Two jobs, both aga
 
 1. **Check 0, the spec**, in full, including the neighbour grep for *must not break*. At this
    size the spec is the whole design, so its gaps are blockers exactly as at stage 1. Also check
-   that every §2.2 and §2.3 row is served by a task in §5, that every task cites S/N items, and
+   that every §2.2, §2.3 and §2.4 row is served by a task in §5 (or an existing signal you confirmed), that every task cites S/N/O items, and
    that each S-test fails today while an N-guard says what it pins.
 2. **The track.** Verify the small routing holds: grep for a migration or schema change, a changed
    contract and its consumers, a new or changed consumer or job, a boundary crossing, a third
@@ -146,6 +152,7 @@ Verdict: no blockers | <k> blocker(s)
 - Does: ok | <gap>
 - We'll know it works: ok | <gap>
 - Must not break: ok | <neighbours missing or unguarded>
+- Debug at 3 am: ok | <failure mode with no signal, or a signal that would not localise it>
 
 ## Track check
 small holds (<what you grepped>) | escalate: <trigger> — <path:line>
@@ -167,6 +174,7 @@ Verdict: no blockers | <k> blocker(s)
 - Does: ok | <gap>
 - We'll know it works: ok | <gap>
 - Must not break: ok | <neighbours missing or unguarded>
+- Debug at 3 am: ok | <failure mode with no signal, or a signal that would not localise it>
 
 ## Risk map (look here first)
 1. <area> — <where> — <why risky here> — verify: <what to check by hand>

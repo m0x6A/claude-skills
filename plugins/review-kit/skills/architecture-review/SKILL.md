@@ -1,6 +1,6 @@
 ---
 name: architecture-review
-description: Run a repeatable, evidence-first architecture audit of a backend — boundaries between modules or bounded contexts, gateway rules, messaging and delivery guarantees, continuity and self-healing (migrations, retries, health checks, startup), error handling, configuration, and code organisation — producing a dated report with severities, a top-risk list and a map from finding to owning work. Use when reviewing a change that touches hosts, data access, messaging or composition, when asked whether the backend is "consistent", or to produce a periodic architecture report.
+description: Run a repeatable, evidence-first architecture audit of a backend — boundaries between modules or bounded contexts, gateway rules, messaging and delivery guarantees, continuity and self-healing (migrations, retries, health checks, startup), operability (could on-call debug the busiest flows at 3 am from logs, metrics and traces alone), error handling, configuration, and code organisation — producing a dated report with severities, a top-risk list and a map from finding to owning work. Use when reviewing a change that touches hosts, data access, messaging or composition, when asked whether the backend is "consistent", or to produce a periodic architecture report.
 ---
 
 # Architecture review
@@ -34,7 +34,16 @@ work already owns.
    cover the real dependencies (so ready ≠ live); hosts wait for their migration; backfills are
    paged and cancellable background work, not startup blocking; calls to external dependencies go
    through a resilience pipeline.
-6. **Grep set.** Run it and report counts and the worst files. The defaults for .NET follow; the
+6. **Operability: the 3 am question.** For the two or three busiest or riskiest flows, ask: *if I
+   were on call at 3 am and this broke, what observability would I need to solve it?* Trace one
+   request end to end in the code and check that on-call could tell, from signals alone, that it is
+   failing, where, and for which record: the correlation or trace id survives every hop (gateway →
+   broker → consumer → outbound HTTP); failures log as structured events with the business key;
+   error queues, outboxes and background loops have a depth or lag metric and an alert; health
+   checks say which dependency is down; nothing swallows an exception without a log. A hop that drops
+   the id, or a failure path with no signal, is a **MED** finding (**HIGH** when it can lose data
+   silently).
+7. **Grep set.** Run it and report counts and the worst files. The defaults for .NET follow; the
    profile replaces them for other stacks:
    ```bash
    grep -rln "CancellationToken.None" src --include='*.cs' | grep -v Tests | wc -l
@@ -43,12 +52,12 @@ work already owns.
    grep -rEn "^\s*if \(.*\)\s*$" -A1 src --include='*.cs' | grep -v "{" | head
    ```
    plus a scan for files with more than one top-level type, if the project has that rule.
-7. **Configuration.** Options validated at startup; no localhost fallbacks that survive into
+8. **Configuration.** Options validated at startup; no localhost fallbacks that survive into
    production; one configuration order (files → secret store → env → local secrets).
-8. **Verify before you write.** Re-check the three worst findings against runtime wiring: who
+9. **Verify before you write.** Re-check the three worst findings against runtime wiring: who
    registers the type, who publishes the message, whether the code path is reachable. Record any
    correction.
-9. **Report** to the profile's location (default `doc/reviews/YYYY-MM-DD-architecture-review.md`):
+10. **Report** to the profile's location (default `doc/reviews/YYYY-MM-DD-architecture-review.md`):
    an inventory table; findings by area, with severity (**HIGH** can take production down or corrupt
    state, **MED** will bite under load or in an incident, **LOW** is hygiene); what is done
    well; the top 15 by risk; and a stream map (finding id → the issue or feature that owns it). For a PR,

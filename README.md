@@ -25,6 +25,9 @@ first use.
 - **No code without a spec.** `change-design` and `feature-design` make every design answer *what the
   change does*, *how we'll know it works* and *what it must not break*, and the tasks must prove all
   three. `start-change` decides how much ceremony the change needs, not whether it gets a spec.
+- **Design for 3 am.** Every design, build and review skill asks: *if I were on call at 3 am and this
+  broke, what observability would I need to solve it?* The answer (the alert, the log line with its ids,
+  the trace) is designed and tested with the change, not added after the first incident.
 - **Concentrate human attention.** Reviews lead with a ranked map of at most three places to look,
   each with a check a person can do in a minute, instead of a flat list of findings.
 - **Trust the data before reading it.** Investigations prove that telemetry is flowing before

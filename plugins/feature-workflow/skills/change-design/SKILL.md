@@ -1,6 +1,6 @@
 ---
 name: change-design
-description: Use whenever someone asks for a quick spec, a small or lightweight design, a short plan, "spec and tasks", or says a change does not need the full design ritual, and whenever start-change routes work to the small track. The small track of the feature workflow: for a contained behaviour change (one or two projects, behind existing contracts, no migration, no new consumer) write one short change.md holding the spec (what the change does, how we'll know it works, what it must not break), where it changes, a core-caveats triage, test-first tasks and verification; a light design-reviewer pass; one approval by a person before code. Escalates to feature-design when a migration, contract change, consumer or boundary crossing turns up.
+description: Use whenever someone asks for a quick spec, a small or lightweight design, a short plan, "spec and tasks", or says a change does not need the full design ritual, and whenever start-change routes work to the small track. The small track of the feature workflow: for a contained behaviour change (one or two projects, behind existing contracts, no migration, no new consumer) write one short change.md holding the spec (what the change does, how we'll know it works, what it must not break, what on-call would need to debug it at 3 am), where it changes, a core-caveats triage, test-first tasks and verification; a light design-reviewer pass; one approval by a person before code. Escalates to feature-design when a migration, contract change, consumer or boundary crossing turns up.
 ---
 
 # Change design: the small track
@@ -11,7 +11,7 @@ ritual that only pays off for larger work: the diagrams, the full caveat packs, 
 tables, the separate plan and the second gate.
 
 **The spec is not optional here either.** If you cannot say what the change does, how we'll know it
-works and what it must not break, ask the user. Do not write a vague answer.
+works, what it must not break and what on-call would need to debug it at 3 am, ask the user. Do not write a vague answer.
 
 ## Before you start
 
@@ -35,6 +35,11 @@ columns as a full design, so a promotion copies them unchanged. Rules per sectio
   - *2.3 Must not break* (N1, N2, …): read the code to find the neighbours: the callers of what you
     change, the screens and flows next to it, the guarantees in specs and ADRs. Each gets a guard:
     an existing test you opened and confirmed exercises it, or a new one. "Nothing" is not an answer.
+  - *2.4 Debug at 3 am* (O1, O2, …): if you were on call at 3 am and this broke, what would you
+    need to solve it? For each realistic failure mode of the change: how we find out, the signal that
+    localises it (log line with its ids, metric, span) and the first action. Often the existing
+    telemetry already covers it: then name the existing signal and say you checked it fires on this
+    path. A missing signal becomes a task. Usually one or two rows.
 - **§3 Where it changes**: one line per project and file. No diagrams by default; add one Mermaid
   `sequenceDiagram` only if the flow is not obvious from the list (labels on one line, `·` between parts).
 - **§4 Caveats triage**: the *Core* rows of `../feature-design/references/caveats.md` plus the rows of
@@ -43,9 +48,9 @@ columns as a full design, so a promotion copies them unchanged. Rules per sectio
   `n/a: <row>, <row>, … — <shared reason>`, so the triage costs what the change deserves. A caveat
   that shows a neighbour at risk adds an N-row to §2.3. One that hits a full-track trigger (see
   `start-change`) means **escalate** (below).
-- **§5 Tasks**: ordered; each names its test, the files, and the S/N items it serves. A test for an
+- **§5 Tasks**: ordered; each names its test, the files, and the S/N/O items it serves. A test for an
   S-item must fail today (say why). A new guard for an N-item may pass today; it pins existing
-  behaviour so the change cannot move it, so say what it pins. A task that serves no S/N item is
+  behaviour so the change cannot move it, so say what it pins. A task that serves no S/N/O item is
   scope creep: cut it, or add the item to §2.
 - **§6 Verification**: the exact commands to run and any manual check to walk. No restated table:
   §2 says what proves each item, §5 says which task produces it. The PR is ready when every task is
@@ -68,7 +73,7 @@ columns as a full design, so a promotion copies them unchanged. Rules per sectio
    the index already has, with track `small` and the link pointing at `change.md`.
 3. **Build.** As in `feature-design` *After approval*: branch per the profile (first commit
    `Add change design for <title> (#<N>)`), implement test first ticking tasks, and on merge set
-   `status: implemented` and add the history rows. If a full-track trigger or a new S/N item turns up
+   `status: implemented` and add the history rows. If a full-track trigger or a new S/N/O item turns up
    while building, stop: amend change.md and re-gate, or escalate. Do not build past the spec.
 
 ## Escalate to full

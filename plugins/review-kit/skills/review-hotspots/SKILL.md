@@ -41,7 +41,10 @@ per-area blocker lists, things not to flag), else the defaults below plus `AGENT
    what it must not break): every "must not break" item the diff touches is checked against its
    guard. A guard that was deleted, skipped or weakened in this diff is a finding, and so is an item
    whose guard never ran. Every "how we'll know" test named in the plan must exist in the diff
-   or the tree.
+   or the tree, and every "debug at 3 am" signal must be emitted on the path the diff changes.
+5. **For a hotspot entry, ask the 3 am question**: if this broke tonight, what would on-call need
+   to find it? A failure path in the entry with no log, metric or alert (or one without the id that
+   localises it) belongs in that entry's *Verify by hand* or becomes a finding.
 
 ## 2. Build the map (at most three entries)
 

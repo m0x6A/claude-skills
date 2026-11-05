@@ -6,11 +6,14 @@ Reviews that spend a person's attention where it matters.
   is dangerous *in this diff*, what to verify by hand in a minute, and a verdict), ranked by hotspot
   (authorisation → schema → message contracts → public API → user-supplied content → CI → telemetry),
   then at most five blocker or should-fix findings. No polish. If the PR has a feature spec, it checks
-  each "must not break" guard.
+  each "must not break" guard and "debug at 3 am" signal, and asks the 3 am question of every
+  hotspot.
 - **architecture-review**: a repeatable, evidence-first audit (boundaries, gateway, messaging,
-  continuity, error handling, configuration) that writes a dated report with severities and a map from
+  continuity, operability — could on-call debug the busiest flows at 3 am from signals alone? — error
+  handling, configuration) that writes a dated report with severities and a map from
   each finding to the work that owns it.
-- **architecture-guardian** agent: a boundary and consistency check of a diff, ending with a verdict.
+- **architecture-guardian** agent: a boundary and consistency check of a diff, including the 3 am question for
+  every new failure path, ending with a verdict.
 - **docs-reconciler** agent: fixes guidance docs (ADR index, agent guide, debt registers, feature
   indexes, mirrored skills) to match the code.
 
