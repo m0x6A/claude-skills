@@ -2,6 +2,7 @@
 feature: <issue>-<slug>
 issue: <issue number>
 title: <feature title>
+track: full
 status: proposed            # proposed | approved (a person approved it) | implemented
 date: YYYY-MM-DD
 author: <person>

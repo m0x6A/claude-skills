@@ -1,6 +1,6 @@
 # Feature workflow profile — <project>
 
-Read by the `feature-design` skill and the `design-reviewer` agent. Commit it as
+Read by the `start-change`, `change-design` and `feature-design` skills and the `design-reviewer` agent. Commit it as
 `.claude/profiles/feature-workflow.md`.
 
 ## Layout
@@ -15,9 +15,14 @@ Read by the `feature-design` skill and the `design-reviewer` agent. Commit it as
 - Labels for a feature: `type:feature` + area labels: `backend`, `frontend`, `database`, …
 - Board: `gh project item-add <number> --owner <owner> --url <issue>` (or "none")
 
-## Branches and size
-- Feature: `feature/<N>-<slug>` · Trivial: `trivial/<slug>`
-- Trivial threshold: ≤ 100 changed lines under `src/`, ≤ 2 projects, issue referenced
+## Tracks (read by start-change)
+- Branches: small and full `feature/<N>-<slug>` · trivial `trivial/<slug>`
+- Trivial threshold: ≤ 100 changed lines under `src/`, ≤ 2 projects, issue referenced, no behaviour change beyond the fix
+- Small: everything that is neither trivial nor full (default)
+- Full-track triggers: the defaults in `start-change` (migration, consumed contract, consumer/job/saga,
+  boundary crossing, > 2 deployables, new dependency, auth/tenancy, new multi-step flow), plus:
+  - `<project-specific trigger, e.g. anything under src/Payments/>`
+  - remove: `<a default that does not apply here, with the reason>`
 
 ## Deployables
 - Source of truth for names: `<deps manifest | solution | workspace list>`
