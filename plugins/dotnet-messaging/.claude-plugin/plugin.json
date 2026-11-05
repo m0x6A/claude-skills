@@ -1,0 +1,19 @@
+{
+  "name": "dotnet-messaging",
+  "description": "MassTransit consumers (outbox tiers, idempotency, respond-or-publish), thin BFF gateway endpoints over request clients, and safe EF Core migrations.",
+  "version": "1.0.0",
+  "author": {
+    "name": "Mattias Jonsson",
+    "url": "https://github.com/m0x6A"
+  },
+  "license": "MIT",
+  "repository": "https://github.com/m0x6A/claude-skills",
+  "keywords": [
+    "dotnet",
+    "masstransit",
+    "rabbitmq",
+    "efcore",
+    "bff",
+    "microservices"
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "name": "grafana-ops",
+  "description": "Investigate production incidents from live Grafana data (metrics, logs, traces) with a trust-check-first procedure, and keep alerts and dashboards as code with a linter, publisher and live verifier.",
+  "version": "1.0.0",
+  "author": {
+    "name": "Mattias Jonsson",
+    "url": "https://github.com/m0x6A"
+  },
+  "license": "MIT",
+  "repository": "https://github.com/m0x6A/claude-skills",
+  "keywords": [
+    "grafana",
+    "observability",
+    "incident",
+    "alerting",
+    "dashboards",
+    "prometheus",
+    "loki",
+    "tempo",
+    "otlp"
+  ]
+}

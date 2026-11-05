@@ -1,0 +1,129 @@
+name: Publish telemetry
+
+# Dashboards and alert rules are code in this repository. Publishing them by hand is a
+# step that stops happening, and then the stack and the repository drift apart without
+# anyone noticing. Here a pull request lints them, and a merge to main publishes them —
+# which also makes drift visible: a failed run is the notification.
+#
+# Adjust the three values under `env:` and the `paths:` filters to your layout. The
+# scripts are a pinned copy of the grafana-as-code skill's scripts/ directory, committed
+# to this repository, so CI never runs code you have not reviewed.
+#
+# Repository secrets: GRAFANA_URL, GRAFANA_API_TOKEN (a service-account token that can
+# write dashboards, alert rules, contact points and folders, and read datasources), and
+# the variable your contact_point.addresses_env names (GRAFANA_ALERT_EMAIL below).
+
+on:
+  pull_request:
+    paths:
+      - "telemetry/**"
+      - "grafana-as-code.json"
+      - ".github/workflows/publish-telemetry.yml"
+  push:
+    branches: [main]
+    paths:
+      - "telemetry/**"
+      - "grafana-as-code.json"
+      - ".github/workflows/publish-telemetry.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  SCRIPTS_DIR: telemetry/grafana/scripts # where the copy of scripts/ lives
+  GRAFANA_AS_CODE_CONFIG: grafana-as-code.json
+  # Grafana reports health for a rule only after evaluating it once. Wait a bit more than the
+  # longest rule-group `interval:` in alerts_dir (1m in the example) before verifying.
+  EVALUATION_WAIT_SECONDS: "90"
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4
+
+      - name: Setup Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v5
+        with:
+          python-version: "3.12"
+
+      - name: Install PyYAML
+        run: python3 -m pip install pyyaml
+
+      - name: Unit tests for the scripts
+        run: python3 -m unittest discover -s "$SCRIPTS_DIR/tests"
+
+      - name: Lint dashboards and alert rules
+        run: python3 "$SCRIPTS_DIR/lint.py"
+
+  publish:
+    needs: lint
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    # Never cancel a run part-way: the publishers walk the files one at a time and exit on the
+    # first error, so an interrupted run leaves the stack half-updated with nothing recording it.
+    concurrency:
+      group: publish-telemetry
+      cancel-in-progress: false
+    env:
+      GRAFANA_URL: ${{ secrets.GRAFANA_URL }}
+      GRAFANA_API_TOKEN: ${{ secrets.GRAFANA_API_TOKEN }}
+      GRAFANA_ALERT_EMAIL: ${{ secrets.GRAFANA_ALERT_EMAIL }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4
+
+      - name: Setup Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v5
+        with:
+          python-version: "3.12"
+
+      # The secrets context is not available in a job-level `if`, so the guard is a step.
+      # Failing here, naming the secret, beats a 401 surfacing from inside urllib.
+      - name: Check the Grafana credentials are configured
+        run: |
+          missing=""
+          for var in GRAFANA_URL GRAFANA_API_TOKEN GRAFANA_ALERT_EMAIL; do
+            if [ -z "${!var}" ]; then
+              missing="$missing $var"
+            fi
+          done
+          if [ -n "$missing" ]; then
+            echo "::error::Missing repository secret(s):$missing"
+            exit 1
+          fi
+
+      - name: Install PyYAML
+        run: python3 -m pip install pyyaml
+
+      # Lint again rather than trusting the lint job's checkout: both publishers exit on the
+      # first file they cannot parse, by which point earlier files are already live, so
+      # validating everything up front turns a typo into a failed run that changed nothing.
+      - name: Lint dashboards and alert rules
+        run: python3 "$SCRIPTS_DIR/lint.py"
+
+      # --prune deletes only this app's objects (uid prefixes from the config, inside the
+      # configured folder) that no file defines any more, so something removed from the repo
+      # does not live on as an orphan.
+      - name: Publish dashboards
+        run: python3 "$SCRIPTS_DIR/publish_dashboards.py" --prune
+
+      - name: Publish alert rules and the contact point
+        run: python3 "$SCRIPTS_DIR/publish_alerts.py" --prune
+
+      # Blocking: a rule in Error looks exactly like a rule at Normal from the outside, and
+      # never fires. Grafana needs one evaluation interval before it reports health for a
+      # rule it just received.
+      - name: Verify every alert rule evaluates without error
+        run: |
+          sleep "$EVALUATION_WAIT_SECONDS"
+          python3 "$SCRIPTS_DIR/verify_live.py" --alerts-only
+
+      # Advisory, never blocking: a counter that has never been incremented is not stored, so a
+      # genuinely new metric looks missing until it first fires. What this catches is the other
+      # kind — a query that is well-formed, correctly scoped, and names a series nothing emits.
+      - name: Report queries that match nothing on the stack
+        continue-on-error: true
+        run: python3 "$SCRIPTS_DIR/verify_live.py" --panels-only

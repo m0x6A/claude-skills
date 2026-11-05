@@ -1,0 +1,59 @@
+<title><!--TITLE--></title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+  /* Layout: one column of diagram panels, each in its own scroll container; the page is read, not operated. */
+  :root {
+    --bg: #fbfaf7; --fg: #1f2a37; --muted: #5b6774; --panel: #ffffff; --line: #e3e1da;
+    --affected: #2563eb; --new: #059669; --quiet: #cbd5e1;
+    --font-body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+    --font-mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) { --bg: #0f1419; --fg: #e6e9ee; --muted: #9aa5b1; --panel: #161c24; --line: #273140; --quiet: #3b4656; color-scheme: dark; }
+  }
+  :root[data-theme="dark"] { --bg: #0f1419; --fg: #e6e9ee; --muted: #9aa5b1; --panel: #161c24; --line: #273140; --quiet: #3b4656; color-scheme: dark; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 15px; line-height: 1.5;
+         padding-block: 24px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+  main { max-width: 1100px; margin: 0 auto; display: grid; gap: 20px; }
+  header h1 { font-size: 1.45rem; margin: 0 0 4px; text-wrap: balance; letter-spacing: -0.01em; }
+  header p { margin: 0; color: var(--muted); }
+  header .meta { font-family: var(--font-mono); font-size: 0.8rem; margin-top: 8px; }
+  .legend { display: flex; gap: 18px; flex-wrap: wrap; color: var(--muted); font-size: 0.85rem; }
+  .legend span::before { content: ""; display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 6px; vertical-align: -2px; }
+  .legend .a::before { background: var(--affected); } .legend .n::before { background: var(--new); } .legend .q::before { background: var(--quiet); }
+  section { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px; min-width: 0; }
+  section h2 { font-size: 0.95rem; margin: 0 0 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+  .scroll { overflow-x: auto; }
+  pre.mermaid { margin: 0; background: transparent; }
+  /* Mermaid sets an inline max-width on its svg so it shrinks to the panel; a long pipeline then becomes unreadable.
+     Default is natural size (1:1) with horizontal scroll inside the panel; the toggle fits it to the panel width. */
+  pre.mermaid svg { max-width: none !important; height: auto; }
+  main.fit pre.mermaid svg { max-width: 100% !important; }
+  .toolbar { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+  .toolbar button { font: inherit; font-size: 0.85rem; padding: 6px 12px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel); color: var(--fg); cursor: pointer; }
+  .toolbar button:focus-visible { outline: 2px solid var(--affected); outline-offset: 2px; }
+  .toolbar button[aria-pressed="true"] { border-color: var(--affected); }
+</style>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;600&family=IBM+Plex+Mono&display=swap">
+<main>
+  <header>
+    <h1><!--TITLE--></h1>
+    <p>System design diagrams, rendered from the Mermaid source in design.md.</p>
+    <p class="meta"><!--META--></p>
+  </header>
+  <div class="toolbar">
+    <div class="legend"><span class="a">affected by this feature</span><span class="n">new</span><span class="q">untouched</span></div>
+    <button id="fit" type="button" aria-pressed="false">Fit to width</button>
+  </div>
+  <!--DIAGRAMS-->
+</main>
+<script>
+  (function () {
+    var main = document.querySelector('main'), btn = document.getElementById('fit');
+    btn.addEventListener('click', function () {
+      var on = main.classList.toggle('fit');
+      btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+      btn.textContent = on ? 'Actual size' : 'Fit to width';
+    });
+  })();
+</script>

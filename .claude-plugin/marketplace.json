@@ -1,0 +1,51 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "m0x6a",
+  "description": "Field-tested Claude Code skills and agents: Grafana operations, a gated feature workflow, attention-first code review, web UX audits and .NET messaging.",
+  "owner": {
+    "name": "Mattias Jonsson",
+    "url": "https://github.com/m0x6A"
+  },
+  "plugins": [
+    {
+      "name": "grafana-ops",
+      "description": "Investigate production incidents from live Grafana data (metrics, logs, traces) with a trust-check-first procedure, and keep alerts and dashboards as code with a linter, publisher and live verifier.",
+      "version": "1.0.0",
+      "source": "./plugins/grafana-ops",
+      "category": "observability",
+      "keywords": ["grafana", "observability", "incident", "alerting", "dashboards", "prometheus", "loki", "tempo", "otlp"]
+    },
+    {
+      "name": "feature-workflow",
+      "description": "Issue → reviewed system design → reviewed implementation plan, each approved by a person before the next step. Mermaid diagrams, caveats checklist, risk map and pattern catalogue.",
+      "version": "1.0.0",
+      "source": "./plugins/feature-workflow",
+      "category": "development",
+      "keywords": ["design", "planning", "architecture", "workflow", "mermaid", "review"]
+    },
+    {
+      "name": "review-kit",
+      "description": "Pull-request review that tells a maintainer with ten minutes where to look first, plus a repeatable architecture audit, a boundary guardian and a docs reconciler.",
+      "version": "1.0.0",
+      "source": "./plugins/review-kit",
+      "category": "development",
+      "keywords": ["code-review", "architecture", "documentation", "pull-request"]
+    },
+    {
+      "name": "web-ux",
+      "description": "Design-system UI building, UX review, WCAG 2.2 AA audits and end-to-end journey checks in a real browser, judged against an explicit craft bar.",
+      "version": "1.0.0",
+      "source": "./plugins/web-ux",
+      "category": "design",
+      "keywords": ["ux", "accessibility", "wcag", "design-system", "frontend", "i18n"]
+    },
+    {
+      "name": "dotnet-messaging",
+      "description": "MassTransit consumers (outbox tiers, idempotency, respond-or-publish), thin BFF gateway endpoints over request clients, and safe EF Core migrations.",
+      "version": "1.0.0",
+      "source": "./plugins/dotnet-messaging",
+      "category": "development",
+      "keywords": ["dotnet", "masstransit", "rabbitmq", "efcore", "bff", "microservices"]
+    }
+  ]
+}

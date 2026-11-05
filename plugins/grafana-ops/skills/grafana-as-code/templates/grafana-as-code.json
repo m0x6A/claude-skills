@@ -1,0 +1,39 @@
+{
+  "_comment": {
+    "about": "Config for the grafana-as-code scripts (lint.py, publish_dashboards.py, publish_alerts.py, verify_live.py). Keys starting with _ are ignored. Paths are relative to this file. Only dashboards_dir and alerts_dir are required; leaving any other key out switches its check off, and each script prints a one-line notice saying so. Unknown keys are an error, so a typo cannot silently disable a check. Credentials never go here: GRAFANA_URL and GRAFANA_API_TOKEN come from the environment.",
+    "dashboards_dir": "Directory of dashboard JSON files, one dashboard per file.",
+    "alerts_dir": "Directory of alert rule files in Grafana file-provisioning format (apiVersion: 1, groups -> rules), *.yaml or *.yml.",
+    "folder": "The Grafana folder dashboards and rules publish to. Found by title; created with this uid only if no folder has the title. Required for publishing alert rules and for --prune.",
+    "dashboard_uid_prefix": "Every dashboard uid must start with this. --prune deletes only dashboards in the folder with this prefix that no file defines, so it can never reach another app's dashboards.",
+    "rule_uid_prefix": "Every rule uid must start with this. --prune and verify_live treat only prefixed rules as this app's.",
+    "scope": "The matcher that pins a query to this app on a shared stack. label/value: a namespace-style label with one exact value. service_label/service_regex: a per-service label whose literal values must all fully match the regex. Either pair scopes a selector; give both if you have both. by (label) groups, it does not filter, so grouping clauses never count. traceql_attributes: a TraceQL query must match (= or =~) on at least one of these.",
+    "datasources": "Datasource NAMES by kind (prometheus, loki, tempo). Dashboards reference datasources by these names; publish_dashboards rewrites them to {type, uid}. Lint rejects any other datasource name.",
+    "placeholders": "Placeholder used in alert YAML datasourceUid -> datasource kind. ${PROMETHEUS_DS_UID} is resolved to the uid of datasources.prometheus at publish time, so the YAML never holds a uid.",
+    "contact_point": "The contact point publish_alerts provisions, and the receiver every rule must name in notification_settings.receiver. The address comes from the environment variable addresses_env. Other types: set type (slack, webhook, ...), static settings in settings, and secret settings as setting -> env var name in settings_env. The notification-policy tree is never touched.",
+    "required_rule_labels": "Labels every rule must carry with exactly these values, e.g. the label an alert-list panel filters on.",
+    "allowed_variables": "Template variables a dashboard query may use besides the ones the dashboard defines (typically Grafana built-ins). A $name that is neither is an error: Grafana leaves it unresolved and the panel shows No data. A scope matcher whose value is a variable (service_name=~\"$service\") is accepted only if the variable is defined or listed here.",
+    "grid_columns": "Width of the dashboard grid. Grafana's is 24; this is the one optional key with a default."
+  },
+  "dashboards_dir": "telemetry/grafana/dashboards",
+  "alerts_dir": "telemetry/grafana/alerts",
+  "folder": { "title": "Acme Shop", "uid": "acme-shop" },
+  "dashboard_uid_prefix": "acme-",
+  "rule_uid_prefix": "acme-",
+  "scope": {
+    "label": "service_namespace",
+    "value": "acme",
+    "service_label": "service_name",
+    "service_regex": "acme-.*",
+    "traceql_attributes": ["resource.service.namespace", "resource.service.name"]
+  },
+  "datasources": {
+    "prometheus": "grafanacloud-acme-prom",
+    "loki": "grafanacloud-acme-logs",
+    "tempo": "grafanacloud-acme-traces"
+  },
+  "placeholders": { "PROMETHEUS_DS_UID": "prometheus", "LOKI_DS_UID": "loki" },
+  "contact_point": { "name": "acme-email", "type": "email", "addresses_env": "GRAFANA_ALERT_EMAIL" },
+  "required_rule_labels": { "app": "acme" },
+  "allowed_variables": ["service", "__range", "__interval", "__rate_interval"],
+  "grid_columns": 24
+}

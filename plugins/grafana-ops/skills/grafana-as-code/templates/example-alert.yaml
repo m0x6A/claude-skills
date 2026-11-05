@@ -1,0 +1,66 @@
+# One rule in the canonical shape lint.py enforces:
+#
+#   A  the datasource query, as an INSTANT query (Prometheus `instant: true`; Loki
+#      `queryType: instant` on the item and on its model). A range query is a time series,
+#      and Grafana refuses to threshold one ("only reduced data can be alerted on") —
+#      the rule sits in Error, which from the outside looks like Normal.
+#   B  reduce A to one number per series, reducer: last.
+#   C  threshold on B; `condition: C`.
+#
+# Traffic on small services is low, so this counts failures over a window instead of
+# dividing them: one failed request out of one is "100 %", which pages on nothing.
+#
+# The description annotation is the runbook — the first thing to open and the first
+# mistake not to make.
+apiVersion: 1
+groups:
+  - orgId: 1
+    name: service-health
+    folder: Acme Shop # informational; publish_alerts.py uses folder from grafana-as-code.json
+    interval: 1m
+    rules:
+      - uid: acme-http-5xx
+        title: HTTP 5xx responses
+        condition: C
+        for: 5m
+        noDataState: OK # idle services send nothing; a dead service is a heartbeat rule's job
+        execErrState: Error
+        labels:
+          severity: critical
+          app: acme
+        notification_settings:
+          receiver: acme-email # the contact point publish_alerts.py provisions
+        annotations:
+          summary: "{{ $labels.service_name }} returned more than 5 server errors in 15 minutes"
+          description: >-
+            More than five 5xx responses from {{ $labels.service_name }} in 15 minutes.
+            Open the service dashboard filtered to this service, then search traces for
+            { resource.service.name = "{{ $labels.service_name }}" && span.http.response.status_code >= 500 }.
+            A 502/504 from a gateway usually means an upstream timeout: check the upstream
+            before assuming the gateway itself is broken.
+        data:
+          - refId: A
+            relativeTimeRange: { from: 900, to: 0 }
+            datasourceUid: ${PROMETHEUS_DS_UID}
+            model:
+              expr: >-
+                sum by (service_name) (increase(http_server_request_duration_seconds_count{service_namespace="acme", http_response_status_code=~"5.."}[15m]))
+              instant: true
+              range: false
+              intervalMs: 60000
+              maxDataPoints: 43200
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              type: reduce
+              reducer: last
+              expression: A
+              intervalMs: 1000
+              maxDataPoints: 43200
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: B
+              conditions:
+                - evaluator: { type: gt, params: [5] }

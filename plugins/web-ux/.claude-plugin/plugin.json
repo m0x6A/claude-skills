@@ -1,0 +1,19 @@
+{
+  "name": "web-ux",
+  "description": "Design-system UI building, UX review, WCAG 2.2 AA audits and end-to-end journey checks in a real browser, judged against an explicit craft bar.",
+  "version": "1.0.0",
+  "author": {
+    "name": "Mattias Jonsson",
+    "url": "https://github.com/m0x6A"
+  },
+  "license": "MIT",
+  "repository": "https://github.com/m0x6A/claude-skills",
+  "keywords": [
+    "ux",
+    "accessibility",
+    "wcag",
+    "design-system",
+    "frontend",
+    "i18n"
+  ]
+}
