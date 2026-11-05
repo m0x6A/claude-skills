@@ -17,6 +17,12 @@ Reviews that spend a person's attention where it matters.
 - **docs-reconciler** agent: fixes guidance docs (ADR index, agent guide, debt registers, feature
   indexes, mirrored skills) to match the code.
 
+## Install
+
+```
+/plugin install review-kit --marketplace m0x6A/claude-skills
+```
+
 ## Setup
 
 Works out of the box with your `AGENTS.md`/`CLAUDE.md`. Optionally add `.claude/profiles/review.md`

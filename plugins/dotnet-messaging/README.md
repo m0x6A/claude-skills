@@ -17,6 +17,12 @@ observability would I need to solve it?*
   for, retry-enabled registration, a runner that logs and fails loudly with backfill progress visible, and
   tests against a real database.
 
+## Install
+
+```
+/plugin install dotnet-messaging --marketplace m0x6A/claude-skills
+```
+
 ## Setup
 
 Put your solution's specifics (the shared registration helper, which host runs which tier, the
