@@ -20,6 +20,7 @@ first use.
 | **web-ux** | `design-system-ui` · `ux-review` · `a11y-audit` (WCAG 2.2 AA) · `user-journey-check` | `ux-critic` | `.claude/profiles/ux.md` |
 | **dotnet-messaging** | `masstransit-consumer` · `bff-gateway-endpoint` · `ef-core-migration` | — | your `AGENTS.md`/`CLAUDE.md` |
 | **voice-issue** (a mod) | `/voice-issue` and a 🎙 button above the prompt: speak, review the drafted issue, create it with `gh` | — | none; `/voice-issue setup` installs what it needs |
+| **issue-picker** (a mod) | `/issues`: list the repository's open issues, filter, pick one and start Claude on it here or in a new tmux window | — | none; needs a logged-in `gh` |
 
 ## Principles the skills share
 

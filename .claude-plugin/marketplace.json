@@ -54,6 +54,14 @@
       "source": "./plugins/voice-issue",
       "category": "productivity",
       "keywords": ["voice", "speech", "whisper", "github", "issues", "mod"]
+    },
+    {
+      "name": "issue-picker",
+      "description": "List the open issues of the current repository, pick one, and start Claude on it here or in a new tmux window.",
+      "version": "0.1.0",
+      "source": "./plugins/issue-picker",
+      "category": "productivity",
+      "keywords": ["github", "issues", "tmux", "picker", "mod"]
     }
   ]
 }
