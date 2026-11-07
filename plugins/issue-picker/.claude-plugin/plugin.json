@@ -1,0 +1,29 @@
+{
+  "name": "issue-picker",
+  "version": "0.1.0",
+  "description": "List the open issues of the current repository, pick one, and start Claude on it here or in a new tmux window.",
+  "author": {
+    "name": "Mattias Jonsson"
+  },
+  "license": "MIT",
+  "types": "./types/index.d.ts",
+  "userConfig": {
+    "tmuxTarget": {
+      "type": "string",
+      "title": "tmux target",
+      "description": "Where \"Start in tmux\" opens Claude: a new window, or a split of the current window.",
+      "options": [
+        "window",
+        "split-right",
+        "split-below"
+      ],
+      "default": "window"
+    },
+    "limit": {
+      "type": "number",
+      "title": "Issue limit",
+      "description": "How many open issues to fetch.",
+      "default": 200
+    }
+  }
+}
