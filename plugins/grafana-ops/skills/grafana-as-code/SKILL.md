@@ -53,8 +53,10 @@ from the environment: `GRAFANA_URL`, `GRAFANA_API_TOKEN` (Editor for publish, Vi
 2. Copy `templates/grafana-as-code.json` to the repo root and fill it from the
    stack profile: dirs, folder, uid prefixes, the **scope** matcher, datasource names,
    placeholders, contact point, required rule labels.
-3. Export what already exists live (`get_dashboard_by_uid` per dashboard; the
-   provisioning export API for rules) into the dirs, then run the linter and fix
+3. Export what already exists live into the dirs: per dashboard,
+   `gcx api /api/dashboards/uid/<uid> --jq '.dashboard'`; for rules, the provisioning
+   export API, `gcx api '/api/v1/provisioning/alert-rules/export?folderUid=<uid>&format=yaml'`.
+   Both are GET requests (no `-X`, no `-d`). Then run the linter and fix
    what it finds *before* the first publish. The first prune deletes everything not
    in the repo.
 4. Copy `templates/publish-telemetry.yml` to `.github/workflows/`. Add the secrets
@@ -70,12 +72,14 @@ from the environment: `GRAFANA_URL`, `GRAFANA_API_TOKEN` (Editor for publish, Vi
 1. Edit or add the rule in the matching domain file under `alerts_dir`, in the
    canonical shape (`references/alerts.md`). Every rule needs a justification: it
    pages someone or someone reads it, otherwise leave it out.
-2. Run the query **as an instant query** against live data through the MCP server.
+2. Run the query **as an instant query** against live data:
+   `gcx metrics query -d <prom> '<expr>' -o json`.
    The series must exist, and the threshold must not already fire or be unreachable.
 3. Lint, then unit tests, then a dry-run publish. Show the user the payload diff.
-4. Merge, and CI publishes. Then `alerting_manage_rules list`: `health: ok`, state
-   Normal. NoData right after a publish usually means a wrong metric name or a
-   counter that has never fired (not zero-seeded).
+4. Merge, and CI publishes. Then `gcx alert rules list --limit 0 -o wide`: health
+   `ok`, state Normal (`gcx alert rules get <uid> -o json` for one rule). NoData
+   right after a publish usually means a wrong metric name or a counter that has
+   never fired (not zero-seeded).
 5. Commit the YAML and the README row together.
 
 ## Changing a dashboard
@@ -84,15 +88,17 @@ from the environment: `GRAFANA_URL`, `GRAFANA_API_TOKEN` (Editor for publish, Vi
 2. Lint (offline: scoping, variables, grid, uids).
 3. `verify_live --panels-only` reports queries that match nothing on the stack. A
    counter that legitimately never fired also shows up, so say which it is.
-4. Merge, and CI publishes. Then `get_dashboard_summary` for the uid and
-   `get_panel_image` on the key panels with real data. "No data" is usually a
+4. Merge, and CI publishes. Then `gcx dashboards get <uid>` to confirm it is live,
+   and `gcx dashboards snapshot <uid> --panel <id> --since 6h` on the key panels with
+   real data (it needs the Grafana Image Renderer). "No data" is usually a
    wrong name (OTLP translation appends units and `_total`) or a matcher that
-   matches nothing; check with `list_prometheus_metric_names`.
+   matches nothing; check with `gcx metrics list-names -d <prom> --contains <part>`.
 5. Commit the JSON and the catalog row together.
 
 ## Never
 
-- Edit rules or dashboards in the UI, or through a write-capable MCP token.
+- Edit rules or dashboards in the UI, or through gcx (`push`, `create`, `update`,
+  `delete`, `gcx api` with `-X` or `-d`), even when the token would allow it.
 - Touch the shared notification-policy tree. Rules route with
   `notification_settings.receiver` to this app's contact point, which keeps the app's
   routing out of a tree other teams own.

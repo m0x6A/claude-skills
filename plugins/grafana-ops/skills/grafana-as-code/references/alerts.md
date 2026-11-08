@@ -111,7 +111,7 @@ above. The linter enforces this so a rule cannot be parked and forgotten.
 
 ## After publishing
 
-`alerting_manage_rules list` → every rule `health: ok`. Error means the shape or the
+`gcx alert rules list --limit 0 -o wide` → every rule's health `ok`. Error means the shape or the
 query is wrong. NoData means a wrong name or an unseeded counter. Firing straight after
 publish means the threshold is wrong, so check it against the instant query you ran
 before merging.

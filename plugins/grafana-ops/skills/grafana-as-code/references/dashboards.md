@@ -47,12 +47,12 @@ variable.
 OTLP → Prometheus translation appends the unit and `_total`:
 `http.server.request.duration` (s) → `http_server_request_duration_seconds_{bucket,count,sum}`;
 a counter `orders.placed` → `orders_placed_total`. Some exporters append an extra suffix
-(`_ea_total`). Always confirm with `list_prometheus_metric_names` before you write a
-panel. When the browser and the backend share a counter name, add a `service_name`
+(`_ea_total`). Always confirm with `gcx metrics list-names -d <prom> --contains <part>` before
+you write a panel. When the browser and the backend share a counter name, add a `service_name`
 matcher.
 
 ## Verifying
 
 Offline lint catches structure. It cannot know whether a query matches anything,
 so run `verify_live --panels-only` with a read token. Then look at the panels with real
-data (`get_panel_image`). A dashboard nobody has looked at with real data is not done.
+data (`gcx dashboards snapshot <uid> --panel <id>`). A dashboard nobody has looked at with real data is not done.
