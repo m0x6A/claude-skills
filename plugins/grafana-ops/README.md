@@ -22,7 +22,9 @@ Run production investigations from live Grafana data, and keep alerts and dashbo
 
 ## Setup
 
-Run the [Grafana MCP server](https://github.com/grafana/mcp-grafana) with `GRAFANA_URL` and a
-**Viewer** service-account token (`GRAFANA_SERVICE_ACCOUNT_TOKEN`). Then ask Claude to "set up the
-Grafana stack profile". Publishing from CI needs an Editor token as `GRAFANA_API_TOKEN`; the scripts
-need Python 3.10+ and PyYAML.
+Install the [gcx CLI](https://github.com/grafana/gcx) (`brew install gcx`, or the install script in its
+README) and log in with a **Viewer** service-account token:
+`gcx login <context> --server <grafana url> --token <token> --yes`, then `gcx config check`. Every
+skill and the agent query Grafana through it. Then ask Claude to "set up the Grafana stack profile".
+Publishing from CI needs an Editor token as `GRAFANA_API_TOKEN`; the scripts need Python 3.10+ and
+PyYAML.

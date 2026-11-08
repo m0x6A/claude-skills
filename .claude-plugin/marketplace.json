@@ -10,7 +10,7 @@
     {
       "name": "grafana-ops",
       "description": "Investigate production incidents from live Grafana data (metrics, logs, traces) with a trust-check-first procedure, and keep alerts and dashboards as code with a linter, publisher and live verifier.",
-      "version": "1.1.0",
+      "version": "1.2.0",
       "source": "./plugins/grafana-ops",
       "category": "observability",
       "keywords": ["grafana", "observability", "incident", "alerting", "dashboards", "prometheus", "loki", "tempo", "otlp"]

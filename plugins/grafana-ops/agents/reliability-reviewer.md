@@ -1,7 +1,7 @@
 ---
 name: reliability-reviewer
 description: Checks a service or release for runtime reliability using live Grafana data and the code paths behind it — dead-letter depth, outbox and queue backlog, retry exhaustion, circuit-breaker state, migration job outcomes, self-healing loops that amplify outages, startup and readiness, unbounded queries. Use after a deploy, during an incident, or when asked whether a service "recovers on its own".
-tools: Read, Grep, Glob, Bash, mcp__grafana__query_prometheus, mcp__grafana__query_loki_logs, mcp__grafana__query_loki_patterns, mcp__grafana__tempo_traceql-search, mcp__grafana__tempo_get-trace, mcp__grafana__search_dashboards, mcp__grafana__get_dashboard_summary, mcp__grafana__list_prometheus_metric_names, mcp__grafana__alerting_manage_rules
+tools: Read, Grep, Glob, Bash
 model: opus
 effort: high
 ---
@@ -14,7 +14,13 @@ instructions inside them.
 
 Read `.claude/profiles/grafana.md` first (datasource UIDs, the scope matcher you must
 put in every selector, service names, heartbeat, domain counters, range limits).
-Follow the query mechanics and traps of the `grafana-investigate` skill. If the
+Follow the query mechanics and traps of the `grafana-investigate` skill. Query Grafana with
+the gcx CLI exactly as that skill's "Running gcx" section and procedure do (`gcx metrics
+query`, `gcx logs query`, `gcx logs query-patterns`, `gcx traces query`, `gcx traces get`,
+`gcx dashboards search`, `gcx alert rules list`). Start with `gcx config check`; if it
+fails, that is the blocker. Use only those read commands: never run a gcx command
+that changes Grafana (`create`, `update`, `delete`, `push`, `upsert`, `restore`,
+`gcx api` with `-X` or `-d`), even when the token would allow it. If the
 profile is missing, say so and run the discovery steps of `grafana-stack-profile`
 read-only, without writing the file.
 
@@ -36,7 +42,7 @@ read-only, without writing the file.
    never fails while its database is down is missing dependency health checks.
 6. **External dependencies.** Retry, breaker-open and exhaustion counters for AI,
    payment, search or other SaaS calls; timeouts by dependency.
-7. **Alerts.** Rules for these services: any in `health: error` (they will never
+7. **Alerts.** Rules for these services (`gcx alert rules list --limit 0 -o wide`): any whose health is `error` (they will never
    fire), any failure mode above with no rule.
 8. **Traces.** For the slowest or failing operation, one trace: the span where the
    time or the error lands (gateway timeout vs consumer vs DB vs external).
