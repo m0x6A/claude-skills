@@ -21,9 +21,14 @@ transcript is kept in a collapsed section of the issue.
 ```
 
 `/voice-issue setup` checks for `pw-record` (PipeWire) and a logged-in `gh`, installs faster-whisper
-with `pip install --user` if it is missing, and downloads the speech model once, so your first
-recording does not wait on the download. Anything it cannot install itself is listed with the command
-to run.
+if it is missing, and downloads the speech model once, so your first recording does not wait on the
+download. Anything it cannot install itself is listed with the command to run.
+
+faster-whisper goes into its own venv, `${XDG_DATA_HOME:-~/.local/share}/voice-issue/venv`, created
+with [uv](https://docs.astral.sh/uv/) on Python 3.13. uv downloads that Python if you don't have it.
+The venv keeps transcription working when your system Python is newer than the packages' wheels
+(onnxruntime is usually the last to catch up). Without uv, setup falls back to
+`pip install --user` on the system `python3`.
 
 ## The transcriber
 
