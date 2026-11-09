@@ -115,6 +115,25 @@ let idleMinutes = 10
 let recording: Running | null = null
 let worker: Worker | null = null
 let labels: string[] = []
+let python: string | null = null
+
+// faster-whisper lives in its own venv on a Python that has wheels for every dependency
+// (onnxruntime trails new Python releases; pip then backtracks into building old PyAV from source).
+const VENV_PYTHON_VERSION = '3.13'
+
+async function venvDir($: Engine) {
+  const r = await tryRun($, ['sh', '-c', 'printf %s "${XDG_DATA_HOME:-$HOME/.local/share}/voice-issue/venv"'])
+  return r.stdout.trim()
+}
+
+// The venv's Python when setup has created it, otherwise the system python3 (an earlier
+// install with pip --user still works).
+async function pythonFor($: Engine) {
+  if (python) return python
+  const venv = `${await venvDir($)}/bin/python`
+  python = (await tryRun($, ['test', '-x', venv])).exitCode === 0 ? venv : 'python3'
+  return python
+}
 
 function set($: Engine, patch: Partial<Session>) {
   return update($, session, s => ({ ...s, ...patch }))
@@ -164,7 +183,7 @@ async function ensureWorker($: Engine): Promise<Worker> {
     let isReady = false
     try {
       const child = $.process.spawn({
-        argv: ['python3', '-P', '-c', WORKER, sock, whisperModel, String(idleMinutes * 60)],
+        argv: [await pythonFor($), '-P', '-c', WORKER, sock, whisperModel, String(idleMinutes * 60)],
       })
       for await (const { stream, text } of child) {
         if (stream === 'stderr') stderr = (stderr + text).slice(-4000)
@@ -192,7 +211,7 @@ async function stopWorker($: Engine) {
 async function transcribe($: Engine, wav: string): Promise<string> {
   const w = await ensureWorker($)
   await w.ready
-  const r = await tryRun($, ['python3', '-P', '-c', CLIENT, w.sock, wav], 600_000)
+  const r = await tryRun($, [await pythonFor($), '-P', '-c', CLIENT, w.sock, wav], 600_000)
   if (r.exitCode !== 0) throw new Error(lastLines(r.stderr))
   const reply = JSON.parse(r.stdout) as { text?: string; error?: string }
   if (reply.error) throw new Error(reply.error)
@@ -307,6 +326,57 @@ async function note($: Engine, line: string) {
   await update($, session, s => ({ ...s, setupLog: [...s.setupLog, line] }))
 }
 
+// Makes sure faster-whisper imports, preferring a uv-managed venv on Python 3.13 and falling
+// back to pip install --user on the system python3 when uv is not installed.
+async function installWhisper($: Engine): Promise<boolean> {
+  const check = ['-P', '-c', 'import faster_whisper, numpy']
+  const dir = await venvDir($)
+  const venv = `${dir}/bin/python`
+  if ((await tryRun($, [venv, ...check])).exitCode === 0) {
+    python = venv
+    await note($, `✓ faster-whisper installed (${dir})`)
+    return true
+  }
+
+  if ((await tryRun($, ['uv', '--version'])).exitCode === 0) {
+    await note($, `… creating a Python ${VENV_PYTHON_VERSION} venv in ${dir} and installing faster-whisper`)
+    const mk = await tryRun($, ['uv', 'venv', '--allow-existing', '--python', VENV_PYTHON_VERSION, dir], 600_000)
+    if (mk.exitCode !== 0) {
+      await note($, `✗ uv venv failed: ${lastLines(mk.stderr, 2)}`)
+      return false
+    }
+    const pip = await tryRun($, ['uv', 'pip', 'install', '--python', venv, 'faster-whisper'], 600_000)
+    if (pip.exitCode !== 0) {
+      await note($, `✗ uv pip install failed: ${lastLines(pip.stderr, 2)}`)
+      return false
+    }
+    python = venv
+    await note($, '✓ faster-whisper installed')
+    return true
+  }
+
+  const sys = await tryRun($, ['python3', ...check])
+  if (sys.exitCode === 0) {
+    python = 'python3'
+    await note($, '✓ faster-whisper installed (system python3)')
+    return true
+  }
+  if (sys.exitCode === 127) {
+    await note($, '✗ neither uv nor python3 found: install uv (https://docs.astral.sh/uv/)')
+    return false
+  }
+  await note($, '… uv not found; trying pip install --user faster-whisper on the system python3')
+  const pip = await tryRun($, ['python3', '-m', 'pip', 'install', '--user', 'faster-whisper'], 600_000)
+  if (pip.exitCode === 0) {
+    python = 'python3'
+    await note($, '✓ faster-whisper installed')
+    return true
+  }
+  await note($, `✗ pip install failed: ${lastLines(pip.stderr, 2)}`)
+  await note($, '  If your python3 is very new, its wheels may be missing: install uv and run setup again.')
+  return false
+}
+
 // Checks every requirement, installs faster-whisper if it is missing and downloads the model,
 // so the first recording does not stall on a 500 MB download.
 async function setup($: Engine) {
@@ -327,26 +397,14 @@ async function setup($: Engine) {
     await note($, gh.exitCode === 127 ? '✗ gh not found: install the GitHub CLI' : '✗ gh is not logged in: run gh auth login')
   }
 
-  const py = await tryRun($, ['python3', '-P', '-c', 'import faster_whisper, numpy'])
-  if (py.exitCode === 0) await note($, '✓ faster-whisper installed')
-  else if (py.exitCode === 127) {
-    isOk = false
-    await note($, '✗ python3 not found')
-  } else {
-    await note($, '… installing faster-whisper (pip install --user faster-whisper)')
-    const pip = await tryRun($, ['python3', '-m', 'pip', 'install', '--user', 'faster-whisper'], 600_000)
-    if (pip.exitCode === 0) await note($, '✓ faster-whisper installed')
-    else {
-      isOk = false
-      await note($, `✗ pip install failed: ${lastLines(pip.stderr, 2)}`)
-    }
-  }
+  if (!(await installWhisper($))) isOk = false
+  const py = await pythonFor($)
 
   if (isOk) {
     await note($, `… downloading the ${whisperModel} model (once; about 75 MB to 3 GB by size)`)
     const dl = await tryRun(
       $,
-      ['python3', '-P', '-c', 'import sys\nfrom faster_whisper import download_model\ndownload_model(sys.argv[1])', whisperModel],
+      [py, '-P', '-c', 'import sys\nfrom faster_whisper import download_model\ndownload_model(sys.argv[1])', whisperModel],
       600_000,
     )
     if (dl.exitCode === 0) await note($, `✓ ${whisperModel} model ready`)
@@ -367,6 +425,7 @@ export const register: Register = (on, options) => {
   recording = null
   worker = null
   labels = []
+  python = null
 
   on('session.start', async ($, e, next) => {
     await $.command.register({
