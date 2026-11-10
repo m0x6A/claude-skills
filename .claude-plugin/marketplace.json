@@ -62,6 +62,14 @@
       "source": "./plugins/issue-picker",
       "category": "productivity",
       "keywords": ["github", "issues", "tmux", "picker", "mod"]
+    },
+    {
+      "name": "dockge",
+      "description": "Deploy a repository's app to a self-hosted Dockge host over SSH: publish the image to GHCR, write a pinned Compose stack with a free port and secrets kept on the host, deploy after a person approves, prove it answers, and keep the previous tag for a rollback.",
+      "version": "0.1.0",
+      "source": "./plugins/dockge",
+      "category": "deployment",
+      "keywords": ["dockge", "docker", "compose", "deploy", "homelab", "self-hosted", "ghcr"]
     }
   ]
 }

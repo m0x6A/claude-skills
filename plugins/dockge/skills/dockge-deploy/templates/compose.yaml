@@ -1,0 +1,24 @@
+# <stacks>/<name>/compose.yaml — one app, as Dockge sees it.
+# Replace OWNER/REPO, the tag, the ports, the data path and the health URL.
+services:
+  app:
+    image: ghcr.io/OWNER/REPO:sha-0000000 # pinned; a rollback is the previous tag
+    restart: unless-stopped
+    ports:
+      - "8081:8080" # host:container; one host port per app
+    env_file:
+      - path: .env # names from the repo, values filled in on the host, mode 600
+        required: false
+    volumes:
+      - ./data:/data # state lives with the stack, so it is backed up with it
+    healthcheck: # needs wget or curl in the image; drop it for distroless images
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/health >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    logging: # bounded, so a chatty app can't fill the host's disk
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
