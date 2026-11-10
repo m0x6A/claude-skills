@@ -22,7 +22,7 @@ variable names.
 
 | Fact | Value |
 | --- | --- |
-| Image source | registry / local (built on the host over `DOCKER_HOST=ssh://`) |
+| Image source | registry / local, built here and sent / local, built on the host |
 | Image | `ghcr.io/OWNER/REPO` / `local/REPO` |
 | Publish workflow (registry only) | `.github/workflows/publish-image.yml` |
 | Runner (registry only) | `ubuntu-latest` / `[self-hosted, LABEL]` |

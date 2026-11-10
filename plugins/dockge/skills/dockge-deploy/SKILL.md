@@ -1,6 +1,6 @@
 ---
 name: dockge-deploy
-description: Deploy the current repository's app to a self-hosted Dockge host over SSH — publish the image to GHCR (or reuse one) or build it locally on the host, write or update the Compose stack in Dockge's stacks folder, pick a free port, keep secrets in the stack's .env on the host, deploy only after a person approves the exact commands, then prove it runs (container healthy, port answers, logs clean) and record how to roll back. Reads and writes `.claude/profiles/dockge.md`. Use when asked to deploy, ship, host or run an app on Dockge, on the apps VM, on the homelab or on a home server, to update a running stack to a new image, or to roll one back.
+description: Deploy the current repository's app to a self-hosted Dockge host over SSH — publish the image to GHCR (or reuse one) or build it locally and send it to the host, write or update the Compose stack in Dockge's stacks folder, pick a free port, keep secrets in the stack's .env on the host, deploy only after a person approves the exact commands, then prove it runs (container healthy, port answers, logs clean) and record how to roll back. Reads and writes `.claude/profiles/dockge.md`. Use when asked to deploy, ship, host or run an app on Dockge, on the apps VM, on the homelab or on a home server, to update a running stack to a new image, or to roll one back.
 ---
 
 # Deploy to Dockge
@@ -86,10 +86,10 @@ Two sources, recorded in the profile as **Image source**:
 
 - **Registry (GHCR):** CI builds and pushes, the host pulls. Use it when the image
   should outlive the host, or when other machines run it too.
-- **Local:** built on the Docker host itself, nothing pushed anywhere. Use it for
-  apps that only ever run on this host, private code you don't want in a
-  registry, or quick iterations. Follow [Local images](#local-images) instead of
-  the steps below.
+- **Local:** built on this machine and sent to the host over SSH, nothing pushed
+  to a registry. Use it for apps that only ever run on this host, private code
+  you don't want in a registry, or quick iterations. Follow
+  [Local images](#local-images) instead of the steps below.
 
 ### Registry (GHCR)
 
@@ -112,39 +112,76 @@ Two sources, recorded in the profile as **Image source**:
 
 ### Local images
 
-Build **on the Docker host**, with the host's daemon reached over SSH. The
-context is streamed from this checkout, and the image lands where it runs. There's
-no registry, no `docker save | docker load`, and the build uses the host's own
-architecture.
+Build **here**, on the machine this skill runs on, and send the finished image
+to the host. You can see this machine's CPU, memory and build cache; you know
+nothing about the host's. A Dockge host is often a small box or VM already
+running other apps, and a heavy build there (Rust, Node, .NET) can starve them or
+run them out of memory. The build cache also stays where you iterate.
 
-1. **Access.** `DOCKER_HOST=ssh://<host> docker version --format '{{.Server.Version}}'`
-   must answer. If it doesn't, the SSH user isn't allowed to use Docker on the
-   host; the person fixes that. Never use `sudo` to get around it.
-2. **Tag.** `local/<name>:sha-<short>` from `git rev-parse --short HEAD`. If
+1. **Docker here.** `docker version --format '{{.Server.Version}}'` must answer.
+   If there's no Docker here, use [Build on the host](#build-on-the-host).
+2. **Match the host's architecture.**
+   `ssh <host> "docker version --format '{{.Server.Os}}/{{.Server.Arch}}'"`
+   gives, for example, `linux/amd64`. Build for exactly that. If this machine is
+   another architecture (an ARM Mac building for an amd64 host), building still
+   works through emulation, but slowly. Say so, and offer
+   [Build on the host](#build-on-the-host) if the host has the resources.
+3. **Tag.** `local/<name>:sha-<short>` from `git rev-parse --short HEAD`. If
    `git status --porcelain` isn't empty, the tree has uncommitted changes: say
    so, and tag `sha-<short>-dirty-<YYYYMMDDHHMM>`, so the tag still names
    exactly one build. Never reuse a tag for a different build.
-3. **Build** (it changes the host, so it's in the commands the person approves):
-   `DOCKER_HOST=ssh://<host> docker build --pull -t local/<name>:<tag> .`
-   Check `.dockerignore` first. Without one, the whole checkout
-   (`node_modules`, `target/`, `.git`, `.env` files) is sent over SSH and may end
-   up in the image. Propose one if it's missing.
-4. **Compose.** Set `image: local/<name>:<tag>` and `pull_policy: never` (see the
+4. **`.dockerignore`.** Check it first. Without one, the whole checkout
+   (`node_modules`, `target/`, `.git`, `.env` files) is sent to the builder and
+   may end up in the image. Propose one if it's missing.
+5. **Build:** `docker build --pull --platform <os/arch> -t local/<name>:<tag> .`
+6. **Room on the host.** `ssh <host> 'df -h "$(docker info --format "{{.DockerRootDir}}")"'`
+   (single quotes, so `docker info` runs on the host, not here) against the
+   image size from `docker image ls local/<name>:<tag>`. With less
+   than twice the image size free, stop and tell the person.
+7. **Send it** (it changes the host, so it's in the commands the person approves):
+   - With [unregistry](https://github.com/psviderski/unregistry) installed here
+     (`docker pussh --help` answers): `docker pussh local/<name>:<tag> <host>`.
+     It sends only the layers the host doesn't have yet, usually a few MB
+     when only the app layer changed.
+   - Otherwise: `docker save local/<name>:<tag> | gzip -1 | ssh <host> 'gunzip | docker load'`.
+     This sends every layer, every time. Mention unregistry to the person if
+     the image is large or deploys are frequent.
+8. **Check it arrived.** `docker image inspect --format '{{.Id}}' local/<name>:<tag>`
+   here and `ssh <host> "docker image inspect --format '{{.Id}}' local/<name>:<tag>"`
+   must print the same id. If the host prints nothing, the transfer failed.
+   Don't deploy.
+9. **Compose.** Set `image: local/<name>:<tag>` and `pull_policy: never` (see the
    template), or Compose will look for `local/<name>` on Docker Hub.
-5. **Deploy without pulling.** Use
-   `ssh <host> 'cd <stacks>/<name> && docker compose up -d --pull never --remove-orphans'`,
-   even if the host has the `apps` helper: its `deploy` pulls first. Tell the
-   person that Dockge's **Update** button pulls too, so for this stack they should
-   redeploy with the build command, not Update.
-6. **Keep the rollback.** The previous tag only exists as an image on the host.
-   Never prune it. List what's there with
-   `ssh <host> "docker image ls local/<name> --format '{{.Tag}} {{.CreatedSince}}'"`.
-   Offer to remove local tags older than the last three, but only as a separate,
-   approved command (`docker image rm local/<name>:<old-tag>`, never
-   `docker image prune -a`).
-7. **Losing the host loses the images.** Record the commit of every deploy in
-   the Deploys table, so any version can be rebuilt with
-   `git checkout <sha>`, then the build in step 3.
+10. **Deploy without pulling.** Use
+    `ssh <host> 'cd <stacks>/<name> && docker compose up -d --pull never --remove-orphans'`,
+    even if the host has the `apps` helper: its `deploy` pulls first. Tell the
+    person that Dockge's **Update** button pulls too, so for this stack they
+    should redeploy with this skill, not use Update.
+11. **Keep the rollback.** The previous tag only exists as an image on the
+    host (and here, while the build cache lasts). Never prune it. List what's
+    there with
+    `ssh <host> "docker image ls local/<name> --format '{{.Tag}} {{.CreatedSince}}'"`.
+    Offer to remove host tags older than the last three, but only as a separate,
+    approved command (`docker image rm local/<name>:<old-tag>`, never
+    `docker image prune -a`).
+12. **Losing the host loses the images.** Record the commit of every deploy in
+    the Deploys table, so any version can be rebuilt with `git checkout <sha>`,
+    then steps 5–8.
+
+#### Build on the host
+
+The alternative is for when there's no Docker here, when emulation is too slow,
+or when the profile says the host is the bigger machine. The host's daemon runs
+the build over SSH, the context is streamed from this checkout, and the image is
+already where it runs, so steps 6–8 fall away:
+
+1. `DOCKER_HOST=ssh://<host> docker version --format '{{.Server.Version}}'` must
+   answer. If it doesn't, the SSH user may not use Docker on the host; the
+   person fixes that. Never use `sudo` to get around it.
+2. Check `ssh <host> free -h` first, and say what else runs there: the build
+   competes with every running stack for memory.
+3. `DOCKER_HOST=ssh://<host> docker build --pull -t local/<name>:<tag> .`, with
+   the same tag and `.dockerignore` rules, then steps 9–12 above.
 
 ## 3. Stack
 
@@ -188,8 +225,8 @@ After the yes, and after the person confirms `.env` has its values:
 - Helper CLI: `ssh <host> apps deploy <name>` (it pulls the stacks repo first if
   there is one).
 - Plain: `ssh <host> 'cd <stacks>/<name> && docker compose pull && docker compose up -d --remove-orphans'`.
-- Local image: the build, then `docker compose up -d --pull never`, as in
-  [Local images](#local-images) step 5.
+- Local image: build, send, check, then `docker compose up -d --pull never`, as
+  in [Local images](#local-images) steps 5–10.
 
 For an update to a running stack: change only the `image:` tag, then deploy the
 same way. Write down the tag that was running before; it is the rollback.
@@ -234,8 +271,10 @@ not roll back the data.
 | --- | --- | --- |
 | `pull access denied`, `unauthorized` | Private package, host not logged in to ghcr.io | Person runs `docker login ghcr.io` on the host with a `read:packages` token |
 | `pull access denied for local/...` | A local image without `pull_policy: never`, or deployed with `apps deploy` or Dockge's Update | Add `pull_policy: never`; deploy with `up -d --pull never` |
-| `No such image: local/...` | Tag built on another machine, or removed | Rebuild on the host from the commit in the Deploys table |
-| `permission denied ... docker.sock` over `DOCKER_HOST=ssh://` | SSH user may not use Docker on the host | Person adds the user to the `docker` group on the host |
+| `No such image: local/...` | Image never sent, transfer failed, or tag removed | Send it again (steps 7–8); if it's gone here too, rebuild from the commit in the Deploys table |
+| `exec format error` with a local image | Built for this machine's architecture, not the host's | Rebuild with `--platform` from step 2 |
+| `docker load` killed or `no space left on device` | Host disk full | Stop; the person frees space, never an automatic prune |
+| `permission denied ... docker.sock` on the host | SSH user may not use Docker there | Person adds the user to the `docker` group on the host |
 | `manifest unknown` | Tag never published | Check the publish run; use a tag from step 2.3 |
 | `port is already allocated` | Port taken by another stack or process | Pick the next free port (step 3.2) |
 | `exec format error` | Image built for arm64 | Build `linux/amd64` (`platforms:` in the workflow) |
