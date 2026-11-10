@@ -1,6 +1,6 @@
 {
   "name": "voice-issue",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "Speak a note; it is transcribed locally and drafted into a structured GitHub issue you review before it is created.",
   "author": {
     "name": "Mattias Jonsson"
@@ -11,26 +11,14 @@
     "whisperModel": {
       "type": "string",
       "title": "Whisper model",
-      "description": "faster-whisper model for local English transcription. Larger is more accurate and slower.",
-      "default": "small.en",
-      "options": [
-        "tiny.en",
-        "base.en",
-        "small.en",
-        "medium.en",
-        "large-v3"
-      ]
+      "description": "faster-whisper model for local English transcription. Larger is more accurate and slower. One of: tiny.en, base.en, small.en, medium.en, large-v3.",
+      "default": "small.en"
     },
     "draftModel": {
       "type": "string",
       "title": "Drafting model",
-      "description": "Claude model that turns the transcript into an issue.",
-      "default": "sonnet",
-      "options": [
-        "haiku",
-        "sonnet",
-        "opus"
-      ]
+      "description": "Claude model that turns the transcript into an issue. One of: haiku, sonnet, opus.",
+      "default": "sonnet"
     },
     "idleMinutes": {
       "type": "number",

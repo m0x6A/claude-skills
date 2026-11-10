@@ -419,8 +419,10 @@ async function setup($: Engine) {
 }
 
 export const register: Register = (on, options) => {
-  whisperModel = String(options.whisperModel ?? 'small.en')
-  draftModel = String(options.draftModel ?? 'sonnet')
+  const pick = (value: unknown, allowed: string[], fallback: string) =>
+    allowed.includes(String(value)) ? String(value) : fallback
+  whisperModel = pick(options.whisperModel, ['tiny.en', 'base.en', 'small.en', 'medium.en', 'large-v3'], 'small.en')
+  draftModel = pick(options.draftModel, ['haiku', 'sonnet', 'opus'], 'sonnet')
   idleMinutes = Math.max(1, Number(options.idleMinutes ?? 10))
   recording = null
   worker = null
