@@ -21,7 +21,7 @@ first use.
 | **dotnet-messaging** | `masstransit-consumer` · `bff-gateway-endpoint` · `ef-core-migration` | — | your `AGENTS.md`/`CLAUDE.md` |
 | **voice-issue** (a mod) | `/voice-issue` and a 🎙 button above the prompt: speak, review the drafted issue, create it with `gh` | — | none; `/voice-issue setup` installs what it needs |
 | **issue-picker** (a mod) | `/issues`: list the repository's open issues, filter, pick one and start Claude on it here or in a new tmux window | — | none; needs a logged-in `gh` |
-| **dockge** | `dockge-deploy`: publish the image, write a pinned stack with a free port and secrets on the host, deploy after approval, prove it answers, keep the rollback tag | — | `.claude/profiles/dockge.md` |
+| **dockge** | `dockge-deploy`: publish the image to GHCR or build it on the host, write a pinned stack with a free port and secrets on the host, deploy after approval, prove it answers, keep the rollback tag | — | `.claude/profiles/dockge.md` |
 
 ## Principles the skills share
 

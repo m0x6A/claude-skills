@@ -5,7 +5,7 @@ you would want it done at 3 am: a pinned image, a port nobody else uses, secrets
 host, a check that the app really answers, and the previous tag written down for a rollback.
 
 - **dockge-deploy**: finds the app's port, health route, environment and state in the repository;
-  publishes the image to GHCR (or offers a publish workflow, `templates/publish-image.yml`); writes
+  publishes the image to GHCR (or offers a publish workflow, `templates/publish-image.yml`), or builds it locally on the Docker host over SSH with no registry at all; writes
   the stack's `compose.yaml` with a pinned tag, a free port, `.env` for secrets, `./data` volumes, a
   healthcheck and bounded logs; deploys only after a person approves the exact commands; proves the
   container is healthy, the port answers and the logs are clean; and records the deploy and its

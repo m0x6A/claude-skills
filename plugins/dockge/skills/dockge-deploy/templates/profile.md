@@ -22,9 +22,10 @@ variable names.
 
 | Fact | Value |
 | --- | --- |
-| Image | `ghcr.io/OWNER/REPO` |
-| Publish workflow | `.github/workflows/publish-image.yml` |
-| Runner | `ubuntu-latest` / `[self-hosted, LABEL]` |
+| Image source | registry / local (built on the host over `DOCKER_HOST=ssh://`) |
+| Image | `ghcr.io/OWNER/REPO` / `local/REPO` |
+| Publish workflow (registry only) | `.github/workflows/publish-image.yml` |
+| Runner (registry only) | `ubuntu-latest` / `[self-hosted, LABEL]` |
 | Platform | `linux/amd64` |
 
 ## App
@@ -40,6 +41,6 @@ variable names.
 
 ## Deploys
 
-| Date | Tag | Previous tag | Result |
-| --- | --- | --- | --- |
-| YYYY-MM-DD | `sha-abc1234` | — | healthy, 200 on `/health` |
+| Date | Tag | Commit | Previous tag | Result |
+| --- | --- | --- | --- | --- |
+| YYYY-MM-DD | `sha-abc1234` | `abc1234` | — | healthy, 200 on `/health` |

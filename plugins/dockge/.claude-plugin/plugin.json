@@ -1,6 +1,6 @@
 {
   "name": "dockge",
-  "description": "Deploy a repository's app to a self-hosted Dockge host over SSH: publish the image to GHCR, write a pinned Compose stack with a free port and secrets kept on the host, deploy after a person approves, prove it answers, and keep the previous tag for a rollback.",
+  "description": "Deploy a repository's app to a self-hosted Dockge host over SSH: publish the image to GHCR or build it on the host, write a pinned Compose stack with a free port and secrets kept on the host, deploy after a person approves, prove it answers, and keep the previous tag for a rollback.",
   "version": "0.1.0",
   "author": {
     "name": "Mattias Jonsson",

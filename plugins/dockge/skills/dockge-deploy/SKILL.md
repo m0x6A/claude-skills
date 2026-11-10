@@ -1,6 +1,6 @@
 ---
 name: dockge-deploy
-description: Deploy the current repository's app to a self-hosted Dockge host over SSH — publish the image to GHCR (or reuse one), write or update the Compose stack in Dockge's stacks folder, pick a free port, keep secrets in the stack's .env on the host, deploy only after a person approves the exact commands, then prove it runs (container healthy, port answers, logs clean) and record how to roll back. Reads and writes `.claude/profiles/dockge.md`. Use when asked to deploy, ship, host or run an app on Dockge, on the apps VM, on the homelab or on a home server, to update a running stack to a new image, or to roll one back.
+description: Deploy the current repository's app to a self-hosted Dockge host over SSH — publish the image to GHCR (or reuse one) or build it locally on the host, write or update the Compose stack in Dockge's stacks folder, pick a free port, keep secrets in the stack's .env on the host, deploy only after a person approves the exact commands, then prove it runs (container healthy, port answers, logs clean) and record how to roll back. Reads and writes `.claude/profiles/dockge.md`. Use when asked to deploy, ship, host or run an app on Dockge, on the apps VM, on the homelab or on a home server, to update a running stack to a new image, or to roll one back.
 ---
 
 # Deploy to Dockge
@@ -82,6 +82,17 @@ From the repository, not from memory:
 
 ## 2. Image
 
+Two sources, recorded in the profile as **Image source**:
+
+- **Registry (GHCR):** CI builds and pushes, the host pulls. Use it when the image
+  should outlive the host, or when other machines run it too.
+- **Local:** built on the Docker host itself, nothing pushed anywhere. Use it for
+  apps that only ever run on this host, private code you don't want in a
+  registry, or quick iterations. Follow [Local images](#local-images) instead of
+  the steps below.
+
+### Registry (GHCR)
+
 1. **Is an image published already?** Look in `.github/workflows/` for
    `docker/build-push-action` or `docker push ghcr.io/...`.
 2. **If not,** offer [templates/publish-image.yml](templates/publish-image.yml):
@@ -98,6 +109,42 @@ From the repository, not from memory:
    `docker login ghcr.io` on the host once, with a token that has only
    `read:packages`. Never run it for them, and never put the token in a command
    you show.
+
+### Local images
+
+Build **on the Docker host**, with the host's daemon reached over SSH. The
+context is streamed from this checkout, and the image lands where it runs. There's
+no registry, no `docker save | docker load`, and the build uses the host's own
+architecture.
+
+1. **Access.** `DOCKER_HOST=ssh://<host> docker version --format '{{.Server.Version}}'`
+   must answer. If it doesn't, the SSH user isn't allowed to use Docker on the
+   host; the person fixes that. Never use `sudo` to get around it.
+2. **Tag.** `local/<name>:sha-<short>` from `git rev-parse --short HEAD`. If
+   `git status --porcelain` isn't empty, the tree has uncommitted changes: say
+   so, and tag `sha-<short>-dirty-<YYYYMMDDHHMM>`, so the tag still names
+   exactly one build. Never reuse a tag for a different build.
+3. **Build** (it changes the host, so it's in the commands the person approves):
+   `DOCKER_HOST=ssh://<host> docker build --pull -t local/<name>:<tag> .`
+   Check `.dockerignore` first. Without one, the whole checkout
+   (`node_modules`, `target/`, `.git`, `.env` files) is sent over SSH and may end
+   up in the image. Propose one if it's missing.
+4. **Compose.** Set `image: local/<name>:<tag>` and `pull_policy: never` (see the
+   template), or Compose will look for `local/<name>` on Docker Hub.
+5. **Deploy without pulling.** Use
+   `ssh <host> 'cd <stacks>/<name> && docker compose up -d --pull never --remove-orphans'`,
+   even if the host has the `apps` helper: its `deploy` pulls first. Tell the
+   person that Dockge's **Update** button pulls too, so for this stack they should
+   redeploy with the build command, not Update.
+6. **Keep the rollback.** The previous tag only exists as an image on the host.
+   Never prune it. List what's there with
+   `ssh <host> "docker image ls local/<name> --format '{{.Tag}} {{.CreatedSince}}'"`.
+   Offer to remove local tags older than the last three, but only as a separate,
+   approved command (`docker image rm local/<name>:<old-tag>`, never
+   `docker image prune -a`).
+7. **Losing the host loses the images.** Record the commit of every deploy in
+   the Deploys table, so any version can be rebuilt with
+   `git checkout <sha>`, then the build in step 3.
 
 ## 3. Stack
 
@@ -141,6 +188,8 @@ After the yes, and after the person confirms `.env` has its values:
 - Helper CLI: `ssh <host> apps deploy <name>` (it pulls the stacks repo first if
   there is one).
 - Plain: `ssh <host> 'cd <stacks>/<name> && docker compose pull && docker compose up -d --remove-orphans'`.
+- Local image: the build, then `docker compose up -d --pull never`, as in
+  [Local images](#local-images) step 5.
 
 For an update to a running stack: change only the `image:` tag, then deploy the
 same way. Write down the tag that was running before; it is the rollback.
@@ -184,6 +233,9 @@ not roll back the data.
 | Symptom | Usual cause | Fix |
 | --- | --- | --- |
 | `pull access denied`, `unauthorized` | Private package, host not logged in to ghcr.io | Person runs `docker login ghcr.io` on the host with a `read:packages` token |
+| `pull access denied for local/...` | A local image without `pull_policy: never`, or deployed with `apps deploy` or Dockge's Update | Add `pull_policy: never`; deploy with `up -d --pull never` |
+| `No such image: local/...` | Tag built on another machine, or removed | Rebuild on the host from the commit in the Deploys table |
+| `permission denied ... docker.sock` over `DOCKER_HOST=ssh://` | SSH user may not use Docker on the host | Person adds the user to the `docker` group on the host |
 | `manifest unknown` | Tag never published | Check the publish run; use a tag from step 2.3 |
 | `port is already allocated` | Port taken by another stack or process | Pick the next free port (step 3.2) |
 | `exec format error` | Image built for arm64 | Build `linux/amd64` (`platforms:` in the workflow) |

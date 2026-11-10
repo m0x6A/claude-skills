@@ -3,6 +3,9 @@
 services:
   app:
     image: ghcr.io/OWNER/REPO:sha-0000000 # pinned; a rollback is the previous tag
+    # Local image built on this host instead? Use these two lines:
+    # image: local/REPO:sha-0000000
+    # pull_policy: never # or Compose looks for local/REPO on Docker Hub
     restart: unless-stopped
     ports:
       - "8081:8080" # host:container; one host port per app
