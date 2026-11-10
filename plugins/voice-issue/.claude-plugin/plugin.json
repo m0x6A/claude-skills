@@ -1,6 +1,6 @@
 {
   "name": "voice-issue",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Speak a note; it is transcribed locally and drafted into a structured GitHub issue you review before it is created.",
   "author": {
     "name": "Mattias Jonsson"

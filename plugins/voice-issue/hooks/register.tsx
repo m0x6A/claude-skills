@@ -293,6 +293,54 @@ async function stop($: Engine) {
   await draft($, transcript, null)
 }
 
+type Reply = Awaited<ReturnType<Engine['model']['complete']>>
+
+// Overload, rate limits, server errors and dropped connections usually pass, so the call is
+// tried again twice before the person sees an error.
+function isTransient(r: Reply) {
+  if (r.isAnswered || r.reason !== 'api-error') return false
+  return ['rate_limit', 'overloaded', 'server_error'].includes(r.error) || r.status === null || r.status >= 500
+}
+
+async function completeWithRetry($: Engine, prompt: string): Promise<Reply> {
+  const ask = (model: string) =>
+    $.model.complete({ model, system: SYSTEM, prompt, maxTokens: 3000, effort: 'low', timeoutMs: 120_000 })
+  let reply = await ask(draftModel)
+  for (const waitMs of [2_000, 6_000]) {
+    if (!isTransient(reply)) break
+    await $.clock.sleep(waitMs)
+    reply = await ask(draftModel)
+  }
+  // A model the account or provider does not offer: fall back to the default once.
+  if (!reply.isAnswered && reply.reason === 'api-error' && reply.error === 'model_not_found' && draftModel !== 'sonnet') {
+    reply = await ask('sonnet')
+  }
+  return reply
+}
+
+// Turns a failed reply into something a person can act on: the HTTP status, the kind of
+// error, and what usually fixes it.
+function explain(r: Reply): string {
+  if (r.isAnswered) return ''
+  if (r.reason === 'empty-reply') return 'the model returned no text. Try again.'
+  if (r.reason === 'aborted') return 'it took longer than two minutes and was stopped. Try again.'
+  const status = r.status === null ? 'no response' : `HTTP ${r.status}`
+  const hints: Record<string, string> = {
+    authentication_failed: 'Claude Code is not logged in here: run /login.',
+    oauth_org_not_allowed: 'your organization does not allow this login: run /login with another account.',
+    account_on_hold: 'the account is on hold: check claude.ai.',
+    verification_required: 'the account needs verifying: check claude.ai.',
+    billing_error: 'a billing problem on the account: check its billing settings.',
+    cloud_credential_error: 'the cloud provider credentials (Bedrock/Vertex) are missing or expired.',
+    rate_limit: 'you hit a usage limit: wait a while, or check /status.',
+    overloaded: 'the API is overloaded: try again in a minute.',
+    server_error: 'the API had a server error: try again in a minute.',
+    model_not_found: `the model "${draftModel}" is not available to this account or provider: pick another draftModel in /plugin.`,
+    invalid_request: 'the API refused the request. Try another draftModel in /plugin; if it persists, report it with this message.',
+  }
+  return `API error (${status}, ${r.error}): ${hints[r.error] ?? 'try again; if it persists, check /status.'}`
+}
+
 async function draft($: Engine, transcript: string, revise: string | null) {
   await set($, { phase: 'drafting' })
   const current = (await read($, session)).draft
@@ -306,15 +354,8 @@ async function draft($: Engine, transcript: string, revise: string | null) {
     .filter(Boolean)
     .join('\n\n')
 
-  const reply = await $.model.complete({
-    model: draftModel,
-    system: SYSTEM,
-    prompt,
-    maxTokens: 3000,
-    effort: 'low',
-    timeoutMs: 120_000,
-  })
-  if (!reply.isAnswered) return fail($, `Drafting failed: ${reply.reason}`)
+  const reply = await completeWithRetry($, prompt)
+  if (!reply.isAnswered) return fail($, `Drafting failed: ${explain(reply)}`)
 
   const parsed = parseDraft(reply.text, labels)
   if (!parsed) return fail($, `The model did not return a usable issue:\n${reply.text.slice(0, 400)}`)
