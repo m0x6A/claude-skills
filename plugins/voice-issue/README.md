@@ -20,9 +20,20 @@ transcript is kept in a collapsed section of the issue.
 /voice-issue setup
 ```
 
-`/voice-issue setup` checks for `pw-record` (PipeWire) and a logged-in `gh`, installs faster-whisper
+`/voice-issue setup` checks for a recorder and a logged-in `gh`, installs faster-whisper
 if it is missing, and downloads the speech model once, so your first recording does not wait on the
 download. Anything it cannot install itself is listed with the command to run.
+
+| | Linux | macOS |
+|---|---|---|
+| Recorder | `pw-record` (PipeWire; Fedora: `sudo dnf install pipewire-utils`) | `rec` from SoX: `brew install sox` |
+| GitHub CLI | `gh`, then `gh auth login` | `brew install gh`, then `gh auth login` |
+| uv (recommended) | see [uv](https://docs.astral.sh/uv/) | `brew install uv` |
+
+On macOS the first recording triggers a microphone prompt for your terminal app (Terminal, iTerm,
+VS Code…). If you dismissed it, notes come out empty: allow the app under System Settings → Privacy &
+Security → Microphone and restart it. Transcription runs on the CPU (int8), which is fast on Apple
+Silicon.
 
 faster-whisper goes into its own venv, `${XDG_DATA_HOME:-~/.local/share}/voice-issue/venv`, created
 with [uv](https://docs.astral.sh/uv/) on Python 3.13. uv downloads that Python if you don't have it.
