@@ -160,13 +160,33 @@ function lastLines(text: string, n = 3) {
   return text.trim().split('\n').slice(-n).join('\n')
 }
 
+// A private temporary folder. Written for both GNU and BSD (macOS) mktemp: only the
+// template form is portable, and macOS's $TMPDIR ends in a slash.
+async function makeTempDir($: Engine): Promise<string | null> {
+  const r = await tryRun($, ['sh', '-c', 'd="${TMPDIR:-/tmp}"; mktemp -d "${d%/}/voice-issue.XXXXXX"'])
+  return r.exitCode === 0 && r.stdout.trim() ? r.stdout.trim() : null
+}
+
+// macOS has no PipeWire, so it records with SoX (brew install sox); Linux uses pw-record.
+// Both write a 16 kHz mono s16 WAV and finish its header on SIGINT.
+let isMac: boolean | null = null
+async function onMac($: Engine): Promise<boolean> {
+  if (isMac === null) isMac = (await tryRun($, ['uname', '-s'])).stdout.trim() === 'Darwin'
+  return isMac
+}
+async function recorderArgv($: Engine, wav: string): Promise<string[]> {
+  return (await onMac($))
+    ? ['rec', '-q', '-r', '16000', '-c', '1', '-b', '16', '-e', 'signed-integer', wav]
+    : ['pw-record', '--rate', '16000', '--channels', '1', '--format', 's16', wav]
+}
+
 // Starts the resident transcriber unless it is running. Called when recording starts, so
 // the model loads while the person speaks.
 async function ensureWorker($: Engine): Promise<Worker> {
   if (worker) return worker
-  const dir = await tryRun($, ['mktemp', '-d', '--suffix', '.voice-issue'])
-  if (dir.exitCode !== 0) throw new Error('Could not create a folder for the transcriber socket.')
-  const sock = `${dir.stdout.trim()}/whisper.sock`
+  const dir = await makeTempDir($)
+  if (!dir) throw new Error('Could not create a folder for the transcriber socket.')
+  const sock = `${dir}/whisper.sock`
 
   let markReady = () => {}
   let markFailed = (_: Error) => {}
@@ -232,20 +252,19 @@ async function start($: Engine) {
   })
   void ensureWorker($).catch(() => {})
 
-  const tmp = await tryRun($, ['mktemp', '--suffix', '.voice-issue.wav'])
-  if (tmp.exitCode !== 0) return fail($, 'Could not create a temporary file for the recording.')
-  const wav = tmp.stdout.trim()
+  const tmp = await makeTempDir($)
+  if (!tmp) return fail($, 'Could not create a temporary file for the recording.')
+  const wav = `${tmp}/note.wav`
+  const argv = await recorderArgv($, wav)
 
   const ended = (async () => {
     try {
-      const child = $.process.spawn({
-        argv: ['pw-record', '--rate', '16000', '--channels', '1', '--format', 's16', wav],
-      })
+      const child = $.process.spawn({ argv })
       for await (const _ of child) {
-        // pw-record writes nothing we need; the loop is the child's life.
+        // The recorder writes nothing we need; the loop is the child's life.
       }
     } catch (err) {
-      await fail($, `pw-record could not start (${String(err)}). ${SETUP_HINT}`)
+      await fail($, `${argv[0]} could not start (${String(err)}). ${SETUP_HINT}`)
     }
   })()
   recording = { wav, ended }
@@ -255,7 +274,7 @@ async function stop($: Engine) {
   const running = recording
   if (!running) return
   recording = null
-  // SIGINT lets pw-record finish the WAV header; the spawn loop then ends by itself.
+  // SIGINT lets the recorder finish the WAV header; the spawn loop then ends by itself.
   await tryRun($, ['pkill', '-INT', '-f', running.wav])
   await running.ended
 
@@ -266,7 +285,7 @@ async function stop($: Engine) {
   } catch (err) {
     return fail($, `Transcription failed:\n${(err as Error).message}\n${SETUP_HINT}`)
   } finally {
-    void tryRun($, ['rm', '-f', running.wav])
+    void tryRun($, ['rm', '-rf', running.wav.replace(/\/note\.wav$/, '')])
   }
   if (!transcript) return fail($, 'Nothing was heard. Check the microphone and try again.')
 
@@ -383,11 +402,23 @@ async function setup($: Engine) {
   await set($, { ...EMPTY, phase: 'setup' })
   let isOk = true
 
-  const pw = await tryRun($, ['pw-record', '--version'])
-  if (pw.exitCode === 0) await note($, '✓ pw-record (PipeWire) found')
-  else {
-    isOk = false
-    await note($, '✗ pw-record not found: install PipeWire tools (Fedora: sudo dnf install pipewire-utils)')
+  if (await onMac($)) {
+    const sox = await tryRun($, ['rec', '--version'])
+    if (sox.exitCode === 0) {
+      await note($, '✓ rec (SoX) found')
+      await note($, '  macOS asks once for microphone access for your terminal app; if notes come out empty,')
+      await note($, '  allow it in System Settings → Privacy & Security → Microphone.')
+    } else {
+      isOk = false
+      await note($, '✗ rec not found: install SoX (brew install sox)')
+    }
+  } else {
+    const pw = await tryRun($, ['pw-record', '--version'])
+    if (pw.exitCode === 0) await note($, '✓ pw-record (PipeWire) found')
+    else {
+      isOk = false
+      await note($, '✗ pw-record not found: install PipeWire tools (Fedora: sudo dnf install pipewire-utils)')
+    }
   }
 
   const gh = await tryRun($, ['gh', 'auth', 'status'])
