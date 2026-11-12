@@ -1,0 +1,20 @@
+{
+  "name": "security-audit",
+  "description": "Cloudflare's security-audit skill packaged for Claude Code: a source-first, coverage-led audit with isolated hunters, adversarial verifiers, a schema-validated findings.json and target-neutral reports.",
+  "version": "0.1.0",
+  "author": {
+    "name": "Cloudflare, Inc. (packaged for Claude Code by Mattias Jonsson)",
+    "url": "https://github.com/cloudflare/security-audit-skill"
+  },
+  "homepage": "https://github.com/cloudflare/security-audit-skill",
+  "license": "MIT",
+  "repository": "https://github.com/m0x6A/claude-skills",
+  "keywords": [
+    "security",
+    "audit",
+    "vulnerability",
+    "pentest",
+    "appsec",
+    "cloudflare"
+  ]
+}

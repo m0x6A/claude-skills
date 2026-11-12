@@ -31,8 +31,8 @@ MARKETPLACE = ROOT / ".claude-plugin" / "marketplace.json"
 NAME_RE = re.compile(r"^[a-z0-9]+(-[a-z0-9]+)*$")
 MAX_DESCRIPTION = 1024
 MAX_SKILL_LINES = 500
-# Skills and agents that live in other marketplaces and may be named in prose.
-EXTERNAL_NAMES = {"skill-creator", "frontend-design"}
+# Skills and agents that live in other marketplaces, or are built into Claude Code, and may be named in prose.
+EXTERNAL_NAMES = {"skill-creator", "frontend-design", "general-purpose"}
 DIAGRAM_CLASSES = ("affected", "new", "quiet", "ext", "ok", "err")
 MODELS = {"inherit", "haiku", "sonnet", "opus", "fable"}
 MODEL_ID_RE = re.compile(r"^claude-[a-z0-9.-]+$")

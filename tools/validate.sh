@@ -30,6 +30,14 @@ for tests in $(find plugins -type d -path '*/scripts/tests' | sort); do
   (cd "$skill" && python3 -m unittest discover -s scripts/tests 2>&1 | tail -1 | sed "s#^#$skill: #") || status=1
 done
 
+step "Bundled Node validator tests"
+if command -v node >/dev/null; then
+  node --test plugins/security-audit/skills/security-audit/*.test.cjs 2>&1 | grep -E '^# (pass|fail)' | sed 's#^#security-audit: #'
+  [ "${PIPESTATUS[0]}" -eq 0 ] || status=1
+else
+  echo "skipped: node is not on PATH"
+fi
+
 if [ "${1:-}" != "--fast" ]; then
   step "Mermaid diagrams render"
   if command -v npx >/dev/null; then

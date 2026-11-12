@@ -1,7 +1,7 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "name": "m0x6a",
-  "description": "Field-tested Claude Code skills and agents: Grafana operations, a gated feature workflow, attention-first code review, web UX audits and .NET messaging.",
+  "description": "Field-tested Claude Code skills and agents: Grafana operations, a gated feature workflow, attention-first code review, web UX audits, .NET messaging and a source-first security audit.",
   "owner": {
     "name": "Mattias Jonsson",
     "url": "https://github.com/m0x6A"
@@ -70,6 +70,14 @@
       "source": "./plugins/dockge",
       "category": "deployment",
       "keywords": ["dockge", "docker", "compose", "deploy", "homelab", "self-hosted", "ghcr"]
+    },
+    {
+      "name": "security-audit",
+      "description": "Cloudflare's security-audit skill packaged for Claude Code: a source-first, coverage-led audit with isolated hunters, adversarial verifiers, a schema-validated findings.json and target-neutral reports.",
+      "version": "0.1.0",
+      "source": "./plugins/security-audit",
+      "category": "security",
+      "keywords": ["security", "audit", "vulnerability", "pentest", "appsec", "cloudflare"]
     }
   ]
 }
