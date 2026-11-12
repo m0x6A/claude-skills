@@ -21,6 +21,7 @@ first use.
 | **dotnet-messaging** | `masstransit-consumer` · `bff-gateway-endpoint` · `ef-core-migration` | — | your `AGENTS.md`/`CLAUDE.md` |
 | **voice-issue** (a mod) | `/voice-issue` and a 🎙 button above the prompt: speak, review the drafted issue, create it with `gh` | — | none; `/voice-issue setup` installs what it needs |
 | **issue-picker** (a mod) | `/issues`: list the repository's open issues, filter, pick one and start Claude on it here or in a new tmux window | — | none; needs a logged-in `gh` |
+| **security-audit** (from [Cloudflare](https://github.com/cloudflare/security-audit-skill)) | `security-audit`: guidance mode for security questions, or a full six-phase audit (recon → coverage-led hunting → adversarial validation → `findings.json` → independent verification → reports) | `security-researcher` (read-only) | none; reports go to `~/security-audit-skill/<repo>/run-<N>` |
 
 ## Principles the skills share
 
@@ -49,6 +50,7 @@ more than the token bill. Models are named by alias, so agents move to new relea
 | `architecture-guardian` | sonnet | high | Runs before every backend merge and checks a diff against rules that are already written down. |
 | `ux-critic` | sonnet | medium | Screenshots and page text make up most of its tokens. Its judgment comes from the written craft standards. |
 | `docs-reconciler` | sonnet | low | Mechanical work: comparing documents with the code and fixing the wording. |
+| `security-researcher` | inherit | — | Recon, coverage critics and final verification inside an audit you chose a model for; a weaker model here misses or misjudges vulnerabilities. |
 
 Skills run in your conversation and keep **your** model, because a model set in a skill would
 silently override the one you picked. Four of them ask for `effort: high` where shallow reasoning
@@ -77,7 +79,7 @@ tools/validate.sh --fast   # skip the Mermaid render
   and agent; the feature-workflow diagram palette is the same in the style guide, template and render
   page; JSON, YAML and Python parse.
 - **`tools/check_mermaid.py`**: every Mermaid diagram in the repository renders.
-- **Script tests**: each skill's `scripts/tests` suite.
+- **Script tests**: each skill's `scripts/tests` suite, and `node --test` for the security-audit validators.
 
 ## Complements (install from their own marketplaces)
 
@@ -97,4 +99,7 @@ plugins/<plugin>/
 
 ## Licence
 
-MIT. See [LICENSE](LICENSE).
+MIT. See [LICENSE](LICENSE). `plugins/security-audit` is Cloudflare's
+[security-audit-skill](https://github.com/cloudflare/security-audit-skill), MIT © 2025-2026 Cloudflare, Inc.;
+its own [LICENSE](plugins/security-audit/LICENSE) and [README](plugins/security-audit/README.md) give the attribution
+and the changes made for Claude Code.
