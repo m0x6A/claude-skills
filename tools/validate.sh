@@ -32,7 +32,7 @@ done
 
 step "Bundled Node validator tests"
 if command -v node >/dev/null; then
-  node --test plugins/security-audit/skills/security-audit/ 2>&1 | grep -E '^# (pass|fail)' | sed 's#^#security-audit: #'
+  node --test plugins/security-audit/skills/security-audit/*.test.cjs 2>&1 | grep -E '^# (pass|fail)' | sed 's#^#security-audit: #'
   [ "${PIPESTATUS[0]}" -eq 0 ] || status=1
 else
   echo "skipped: node is not on PATH"
