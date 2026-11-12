@@ -115,6 +115,25 @@ let idleMinutes = 10
 let recording: Running | null = null
 let worker: Worker | null = null
 let labels: string[] = []
+let python: string | null = null
+
+// faster-whisper lives in its own venv on a Python that has wheels for every dependency
+// (onnxruntime trails new Python releases; pip then backtracks into building old PyAV from source).
+const VENV_PYTHON_VERSION = '3.13'
+
+async function venvDir($: Engine) {
+  const r = await tryRun($, ['sh', '-c', 'printf %s "${XDG_DATA_HOME:-$HOME/.local/share}/voice-issue/venv"'])
+  return r.stdout.trim()
+}
+
+// The venv's Python when setup has created it, otherwise the system python3 (an earlier
+// install with pip --user still works).
+async function pythonFor($: Engine) {
+  if (python) return python
+  const venv = `${await venvDir($)}/bin/python`
+  python = (await tryRun($, ['test', '-x', venv])).exitCode === 0 ? venv : 'python3'
+  return python
+}
 
 function set($: Engine, patch: Partial<Session>) {
   return update($, session, s => ({ ...s, ...patch }))
@@ -141,13 +160,33 @@ function lastLines(text: string, n = 3) {
   return text.trim().split('\n').slice(-n).join('\n')
 }
 
+// A private temporary folder. Written for both GNU and BSD (macOS) mktemp: only the
+// template form is portable, and macOS's $TMPDIR ends in a slash.
+async function makeTempDir($: Engine): Promise<string | null> {
+  const r = await tryRun($, ['sh', '-c', 'd="${TMPDIR:-/tmp}"; mktemp -d "${d%/}/voice-issue.XXXXXX"'])
+  return r.exitCode === 0 && r.stdout.trim() ? r.stdout.trim() : null
+}
+
+// macOS has no PipeWire, so it records with SoX (brew install sox); Linux uses pw-record.
+// Both write a 16 kHz mono s16 WAV and finish its header on SIGINT.
+let isMac: boolean | null = null
+async function onMac($: Engine): Promise<boolean> {
+  if (isMac === null) isMac = (await tryRun($, ['uname', '-s'])).stdout.trim() === 'Darwin'
+  return isMac
+}
+async function recorderArgv($: Engine, wav: string): Promise<string[]> {
+  return (await onMac($))
+    ? ['rec', '-q', '-r', '16000', '-c', '1', '-b', '16', '-e', 'signed-integer', wav]
+    : ['pw-record', '--rate', '16000', '--channels', '1', '--format', 's16', wav]
+}
+
 // Starts the resident transcriber unless it is running. Called when recording starts, so
 // the model loads while the person speaks.
 async function ensureWorker($: Engine): Promise<Worker> {
   if (worker) return worker
-  const dir = await tryRun($, ['mktemp', '-d', '--suffix', '.voice-issue'])
-  if (dir.exitCode !== 0) throw new Error('Could not create a folder for the transcriber socket.')
-  const sock = `${dir.stdout.trim()}/whisper.sock`
+  const dir = await makeTempDir($)
+  if (!dir) throw new Error('Could not create a folder for the transcriber socket.')
+  const sock = `${dir}/whisper.sock`
 
   let markReady = () => {}
   let markFailed = (_: Error) => {}
@@ -164,7 +203,7 @@ async function ensureWorker($: Engine): Promise<Worker> {
     let isReady = false
     try {
       const child = $.process.spawn({
-        argv: ['python3', '-P', '-c', WORKER, sock, whisperModel, String(idleMinutes * 60)],
+        argv: [await pythonFor($), '-P', '-c', WORKER, sock, whisperModel, String(idleMinutes * 60)],
       })
       for await (const { stream, text } of child) {
         if (stream === 'stderr') stderr = (stderr + text).slice(-4000)
@@ -192,7 +231,7 @@ async function stopWorker($: Engine) {
 async function transcribe($: Engine, wav: string): Promise<string> {
   const w = await ensureWorker($)
   await w.ready
-  const r = await tryRun($, ['python3', '-P', '-c', CLIENT, w.sock, wav], 600_000)
+  const r = await tryRun($, [await pythonFor($), '-P', '-c', CLIENT, w.sock, wav], 600_000)
   if (r.exitCode !== 0) throw new Error(lastLines(r.stderr))
   const reply = JSON.parse(r.stdout) as { text?: string; error?: string }
   if (reply.error) throw new Error(reply.error)
@@ -213,20 +252,19 @@ async function start($: Engine) {
   })
   void ensureWorker($).catch(() => {})
 
-  const tmp = await tryRun($, ['mktemp', '--suffix', '.voice-issue.wav'])
-  if (tmp.exitCode !== 0) return fail($, 'Could not create a temporary file for the recording.')
-  const wav = tmp.stdout.trim()
+  const tmp = await makeTempDir($)
+  if (!tmp) return fail($, 'Could not create a temporary file for the recording.')
+  const wav = `${tmp}/note.wav`
+  const argv = await recorderArgv($, wav)
 
   const ended = (async () => {
     try {
-      const child = $.process.spawn({
-        argv: ['pw-record', '--rate', '16000', '--channels', '1', '--format', 's16', wav],
-      })
+      const child = $.process.spawn({ argv })
       for await (const _ of child) {
-        // pw-record writes nothing we need; the loop is the child's life.
+        // The recorder writes nothing we need; the loop is the child's life.
       }
     } catch (err) {
-      await fail($, `pw-record could not start (${String(err)}). ${SETUP_HINT}`)
+      await fail($, `${argv[0]} could not start (${String(err)}). ${SETUP_HINT}`)
     }
   })()
   recording = { wav, ended }
@@ -236,7 +274,7 @@ async function stop($: Engine) {
   const running = recording
   if (!running) return
   recording = null
-  // SIGINT lets pw-record finish the WAV header; the spawn loop then ends by itself.
+  // SIGINT lets the recorder finish the WAV header; the spawn loop then ends by itself.
   await tryRun($, ['pkill', '-INT', '-f', running.wav])
   await running.ended
 
@@ -247,7 +285,7 @@ async function stop($: Engine) {
   } catch (err) {
     return fail($, `Transcription failed:\n${(err as Error).message}\n${SETUP_HINT}`)
   } finally {
-    void tryRun($, ['rm', '-f', running.wav])
+    void tryRun($, ['rm', '-rf', running.wav.replace(/\/note\.wav$/, '')])
   }
   if (!transcript) return fail($, 'Nothing was heard. Check the microphone and try again.')
 
@@ -307,17 +345,80 @@ async function note($: Engine, line: string) {
   await update($, session, s => ({ ...s, setupLog: [...s.setupLog, line] }))
 }
 
+// Makes sure faster-whisper imports, preferring a uv-managed venv on Python 3.13 and falling
+// back to pip install --user on the system python3 when uv is not installed.
+async function installWhisper($: Engine): Promise<boolean> {
+  const check = ['-P', '-c', 'import faster_whisper, numpy']
+  const dir = await venvDir($)
+  const venv = `${dir}/bin/python`
+  if ((await tryRun($, [venv, ...check])).exitCode === 0) {
+    python = venv
+    await note($, `✓ faster-whisper installed (${dir})`)
+    return true
+  }
+
+  if ((await tryRun($, ['uv', '--version'])).exitCode === 0) {
+    await note($, `… creating a Python ${VENV_PYTHON_VERSION} venv in ${dir} and installing faster-whisper`)
+    const mk = await tryRun($, ['uv', 'venv', '--allow-existing', '--python', VENV_PYTHON_VERSION, dir], 600_000)
+    if (mk.exitCode !== 0) {
+      await note($, `✗ uv venv failed: ${lastLines(mk.stderr, 2)}`)
+      return false
+    }
+    const pip = await tryRun($, ['uv', 'pip', 'install', '--python', venv, 'faster-whisper'], 600_000)
+    if (pip.exitCode !== 0) {
+      await note($, `✗ uv pip install failed: ${lastLines(pip.stderr, 2)}`)
+      return false
+    }
+    python = venv
+    await note($, '✓ faster-whisper installed')
+    return true
+  }
+
+  const sys = await tryRun($, ['python3', ...check])
+  if (sys.exitCode === 0) {
+    python = 'python3'
+    await note($, '✓ faster-whisper installed (system python3)')
+    return true
+  }
+  if (sys.exitCode === 127) {
+    await note($, '✗ neither uv nor python3 found: install uv (https://docs.astral.sh/uv/)')
+    return false
+  }
+  await note($, '… uv not found; trying pip install --user faster-whisper on the system python3')
+  const pip = await tryRun($, ['python3', '-m', 'pip', 'install', '--user', 'faster-whisper'], 600_000)
+  if (pip.exitCode === 0) {
+    python = 'python3'
+    await note($, '✓ faster-whisper installed')
+    return true
+  }
+  await note($, `✗ pip install failed: ${lastLines(pip.stderr, 2)}`)
+  await note($, '  If your python3 is very new, its wheels may be missing: install uv and run setup again.')
+  return false
+}
+
 // Checks every requirement, installs faster-whisper if it is missing and downloads the model,
 // so the first recording does not stall on a 500 MB download.
 async function setup($: Engine) {
   await set($, { ...EMPTY, phase: 'setup' })
   let isOk = true
 
-  const pw = await tryRun($, ['pw-record', '--version'])
-  if (pw.exitCode === 0) await note($, '✓ pw-record (PipeWire) found')
-  else {
-    isOk = false
-    await note($, '✗ pw-record not found: install PipeWire tools (Fedora: sudo dnf install pipewire-utils)')
+  if (await onMac($)) {
+    const sox = await tryRun($, ['rec', '--version'])
+    if (sox.exitCode === 0) {
+      await note($, '✓ rec (SoX) found')
+      await note($, '  macOS asks once for microphone access for your terminal app; if notes come out empty,')
+      await note($, '  allow it in System Settings → Privacy & Security → Microphone.')
+    } else {
+      isOk = false
+      await note($, '✗ rec not found: install SoX (brew install sox)')
+    }
+  } else {
+    const pw = await tryRun($, ['pw-record', '--version'])
+    if (pw.exitCode === 0) await note($, '✓ pw-record (PipeWire) found')
+    else {
+      isOk = false
+      await note($, '✗ pw-record not found: install PipeWire tools (Fedora: sudo dnf install pipewire-utils)')
+    }
   }
 
   const gh = await tryRun($, ['gh', 'auth', 'status'])
@@ -327,26 +428,14 @@ async function setup($: Engine) {
     await note($, gh.exitCode === 127 ? '✗ gh not found: install the GitHub CLI' : '✗ gh is not logged in: run gh auth login')
   }
 
-  const py = await tryRun($, ['python3', '-P', '-c', 'import faster_whisper, numpy'])
-  if (py.exitCode === 0) await note($, '✓ faster-whisper installed')
-  else if (py.exitCode === 127) {
-    isOk = false
-    await note($, '✗ python3 not found')
-  } else {
-    await note($, '… installing faster-whisper (pip install --user faster-whisper)')
-    const pip = await tryRun($, ['python3', '-m', 'pip', 'install', '--user', 'faster-whisper'], 600_000)
-    if (pip.exitCode === 0) await note($, '✓ faster-whisper installed')
-    else {
-      isOk = false
-      await note($, `✗ pip install failed: ${lastLines(pip.stderr, 2)}`)
-    }
-  }
+  if (!(await installWhisper($))) isOk = false
+  const py = await pythonFor($)
 
   if (isOk) {
     await note($, `… downloading the ${whisperModel} model (once; about 75 MB to 3 GB by size)`)
     const dl = await tryRun(
       $,
-      ['python3', '-P', '-c', 'import sys\nfrom faster_whisper import download_model\ndownload_model(sys.argv[1])', whisperModel],
+      [py, '-P', '-c', 'import sys\nfrom faster_whisper import download_model\ndownload_model(sys.argv[1])', whisperModel],
       600_000,
     )
     if (dl.exitCode === 0) await note($, `✓ ${whisperModel} model ready`)
@@ -361,12 +450,15 @@ async function setup($: Engine) {
 }
 
 export const register: Register = (on, options) => {
-  whisperModel = String(options.whisperModel ?? 'small.en')
-  draftModel = String(options.draftModel ?? 'sonnet')
+  const pick = (value: unknown, allowed: string[], fallback: string) =>
+    allowed.includes(String(value)) ? String(value) : fallback
+  whisperModel = pick(options.whisperModel, ['tiny.en', 'base.en', 'small.en', 'medium.en', 'large-v3'], 'small.en')
+  draftModel = pick(options.draftModel, ['haiku', 'sonnet', 'opus'], 'sonnet')
   idleMinutes = Math.max(1, Number(options.idleMinutes ?? 10))
   recording = null
   worker = null
   labels = []
+  python = null
 
   on('session.start', async ($, e, next) => {
     await $.command.register({

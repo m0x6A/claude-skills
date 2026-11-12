@@ -50,7 +50,7 @@
     {
       "name": "voice-issue",
       "description": "Speak a note; it is transcribed locally and drafted into a structured GitHub issue you review before it is created.",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "source": "./plugins/voice-issue",
       "category": "productivity",
       "keywords": ["voice", "speech", "whisper", "github", "issues", "mod"]
@@ -62,6 +62,14 @@
       "source": "./plugins/issue-picker",
       "category": "productivity",
       "keywords": ["github", "issues", "tmux", "picker", "mod"]
+    },
+    {
+      "name": "dockge",
+      "description": "Deploy a repository's app to a self-hosted Dockge host over SSH: publish the image to GHCR or build it locally and send it, write a pinned Compose stack with a free port and secrets kept on the host, deploy after a person approves, prove it answers, and keep the previous tag for a rollback.",
+      "version": "0.1.0",
+      "source": "./plugins/dockge",
+      "category": "deployment",
+      "keywords": ["dockge", "docker", "compose", "deploy", "homelab", "self-hosted", "ghcr"]
     },
     {
       "name": "security-audit",
