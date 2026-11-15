@@ -58,8 +58,19 @@ only for what you can't find:
 7. **Backups.** Ask whether the host's stacks folder is backed up (a VM backup,
    restic, nothing). If nothing, say so in the report: `./data` then has no copy.
 
-Every fact gets the date it was verified. Commit the profile with the change that
-needs it.
+8. **Bind address.** The host's LAN IP (`ssh <host> hostname -I`), so published
+   ports listen there and not on every interface. Docker's port rules bypass
+   ufw and firewalld, so `0.0.0.0` would expose the app on any network the host
+   is ever attached to.
+
+Every fact gets the date it was verified.
+
+The profile maps the host: SSH alias, paths, URLs, ports, backup status and
+secret names. Check the repository's visibility with
+`gh repo view --json visibility --jq .visibility`. If it is `PRIVATE`, commit the
+profile with the change that needs it. If it is `PUBLIC` (or you can't tell),
+never commit it: add `.claude/profiles/dockge.md` to `.gitignore` and keep it only
+in the local checkout.
 
 ## 1. Understand the app
 
@@ -100,6 +111,13 @@ Two sources, recorded in the profile as **Image source**:
    `:latest`, built for `linux/amd64`. Set `runs-on` from the profile (a
    self-hosted runner needs Docker; GitHub-hosted works too). It is a normal
    change: commit, push, let it run.
+   - Its actions are pinned to full commit SHAs, because the job holds
+     `packages: write`. Keep them pinned; when you update one, resolve the new
+     tag's SHA (`git ls-remote https://github.com/<action> 'refs/tags/<tag>^{}'`)
+     and keep the version comment.
+   - **Self-hosted runner in a public repository:** keep the triggers to `push`
+     and `workflow_dispatch`. Never add `pull_request` or `pull_request_target`,
+     or anyone's fork PR runs code on your runner.
 3. **Pick the tag.** The newest successful publish on `main`:
    `gh run list --workflow publish-image.yml --branch main --status success -L 1 --json headSha --jq '.[0].headSha[:7]'`
    gives `sha-<that>`. Check that the tag exists before you use it:
@@ -195,11 +213,16 @@ already where it runs, so steps 6–8 fall away:
 3. **Compose file.** Start from [templates/compose.yaml](templates/compose.yaml):
    - the pinned image
    - `restart: unless-stopped`
-   - the port
+   - the port, bound to the profile's bind address (`<lan-ip>:<port>:<container>`)
    - `env_file: .env`
    - volumes under `./data`
    - a healthcheck
    - bounded logs (json-file, 3 × 10 MB), so a chatty app can't fill the disk
+   - `no-new-privileges` and `cap_drop: [ALL]`. If the container then fails with
+     `operation not permitted` (an entrypoint that `chown`s or switches user, a
+     port below 1024), add back only the capability it needs (`CHOWN`,
+     `SETUID`, `SETGID`, `NET_BIND_SERVICE`) under `cap_add`, and say which and
+     why in the report
 
    The healthcheck runs inside the container, so it needs `wget` or `curl` in the
    image. For distroless or scratch images, leave it out and rely on the check
@@ -240,9 +263,12 @@ Don't report success until all four checks pass:
    `healthy`. A state of `restarting` means it is crash-looping: go to the logs.
 2. **It answers from outside.** `curl -fsS -o /dev/null -w '%{http_code}\n' http://<app-host>:<port><health>`
    from this machine, expecting 200.
-3. **Clean logs.** `ssh <host> 'cd <stacks>/<name> && docker compose logs --since 5m'`.
-   Look for `error`, `panic`, `exception`, `fatal`, `refused`, and quote any
-   matches.
+3. **Clean logs.** Search on the host and bring back only the matches, since
+   logs can hold secrets and personal data:
+   `ssh <host> 'cd <stacks>/<name> && docker compose logs --since 5m --no-color 2>&1 | grep -iE "error|panic|exception|fatal|refused" | tail -n 20'`.
+   Quote any matches, but redact anything that looks like a secret value
+   (tokens, passwords, connection strings) before you show it. No output means
+   clean.
 4. **Dockge shows it.** The stack appears at the Dockge URL. It scans the folder;
    a refresh is enough.
 
@@ -274,7 +300,8 @@ not roll back the data.
 | `No such image: local/...` | Image never sent, transfer failed, or tag removed | Send it again (steps 7–8); if it's gone here too, rebuild from the commit in the Deploys table |
 | `exec format error` with a local image | Built for this machine's architecture, not the host's | Rebuild with `--platform` from step 2 |
 | `docker load` killed or `no space left on device` | Host disk full | Stop; the person frees space, never an automatic prune |
-| `permission denied ... docker.sock` on the host | SSH user may not use Docker there | Person adds the user to the `docker` group on the host |
+| `permission denied ... docker.sock` on the host | SSH user may not use Docker there | Person adds the user to the `docker` group on the host (root-equivalent: that SSH key now controls the host, so keep the host LAN-only) |
+| `operation not permitted` on start | `cap_drop: [ALL]` removed a capability the image needs | Add back only that capability under `cap_add` |
 | `manifest unknown` | Tag never published | Check the publish run; use a tag from step 2.3 |
 | `port is already allocated` | Port taken by another stack or process | Pick the next free port (step 3.2) |
 | `exec format error` | Image built for arm64 | Build `linux/amd64` (`platforms:` in the workflow) |

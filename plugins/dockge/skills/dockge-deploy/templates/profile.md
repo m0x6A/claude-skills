@@ -2,7 +2,8 @@
 
 What the `dockge-deploy` skill needs to know about where this repository's app runs.
 Every fact carries the date it was last verified. Secret values never go here, only
-variable names.
+variable names. This file maps your host: commit it only in a private repository; in a
+public one, add `.claude/profiles/dockge.md` to `.gitignore`.
 
 ## Host
 
@@ -16,6 +17,7 @@ variable names.
 | Stacks in git | no / `git@github.com:OWNER/stacks.git`, local clone at `~/src/stacks` | YYYY-MM-DD |
 | Logged in to ghcr.io on the host | yes / no | YYYY-MM-DD |
 | Port range for apps | 8081–8199 | YYYY-MM-DD |
+| Bind address (host's LAN IP) | `192.168.1.10` | YYYY-MM-DD |
 | Stacks folder backed up | nightly VM backup / restic / no | YYYY-MM-DD |
 
 ## Build
