@@ -8,7 +8,9 @@ services:
     # pull_policy: never # or Compose looks for local/REPO on Docker Hub
     restart: unless-stopped
     ports:
-      - "8081:8080" # host:container; one host port per app
+      - "192.168.1.10:8081:8080" # lan-ip:host:container; one host port per app.
+        # Bind to the host's LAN IP: Docker's port rules bypass ufw/firewalld,
+        # so a bare "8081:8080" listens on every interface.
     env_file:
       - path: .env # names from the repo, values filled in on the host, mode 600
         required: false
@@ -20,6 +22,9 @@ services:
       timeout: 5s
       retries: 3
       start_period: 20s
+    security_opt:
+      - no-new-privileges:true
+    cap_drop: [ALL] # add back only what the image needs, e.g. cap_add: [CHOWN, SETUID, SETGID]
     logging: # bounded, so a chatty app can't fill the host's disk
       driver: json-file
       options:
